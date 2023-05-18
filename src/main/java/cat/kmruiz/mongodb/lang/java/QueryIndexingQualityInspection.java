@@ -7,7 +7,6 @@ import cat.kmruiz.mongodb.ui.IndexBeautifier;
 import cat.kmruiz.mongodb.ui.InspectionBundle;
 import com.intellij.codeInspection.AbstractBaseJavaLocalInspectionTool;
 import com.intellij.codeInspection.ProblemsHolder;
-import com.intellij.openapi.util.Key;
 import com.intellij.psi.JavaElementVisitor;
 import com.intellij.psi.PsiElementVisitor;
 import com.intellij.psi.PsiMethod;
@@ -35,6 +34,7 @@ public class QueryIndexingQualityInspection extends AbstractBaseJavaLocalInspect
 
                 var query = perception.query();
                 var candidateIndexes = facade.candidateIndexesForQuery(perception.database(), perception.collection(), query).result();
+                var isCollectionSharded = facade.isCollectionSharded(perception.database(), perception.collection()).result();
 
                 if (query.hasWildcardField() && query.hasHighCardinality()) {
                     holder.registerProblem(method,
@@ -42,20 +42,32 @@ public class QueryIndexingQualityInspection extends AbstractBaseJavaLocalInspect
                                     perception.database(),
                                     perception.collection(),
                                     IndexBeautifier.beautify(indexes.result())));
-                    return;
                 } else if (candidateIndexes.isEmpty()) {
                     holder.registerProblem(method,
                             InspectionBundle.message("inspection.QueryIndexingQualityInspection.basicQueryNotCovered",
                                     perception.database(),
                                     perception.collection(),
                                     IndexBeautifier.beautify(indexes.result())));
-                    return;
-                } else if (candidateIndexes.size() > 1) {
-                    holder.registerProblem(method,
-                            InspectionBundle.message("inspection.QueryIndexingQualityInspection.queryCoveredByMultipleIndexes",
-                                    perception.database(),
-                                    perception.collection(),
-                                    IndexBeautifier.beautify(candidateIndexes)));
+                } else {
+                    if (isCollectionSharded) {
+                        var canUseShardingKey = candidateIndexes.stream().anyMatch(MQLIndex::shardKey);
+                        if (!canUseShardingKey) {
+                            var shardingKey = indexes.result().stream().filter(MQLIndex::shardKey).findFirst().get();
+
+                            holder.registerProblem(method,
+                                    InspectionBundle.message("inspection.QueryIndexingQualityInspection.indexIsNotShardKey",
+                                            perception.database(),
+                                            perception.collection(),
+                                            IndexBeautifier.beautify(candidateIndexes.get(0)),
+                                            IndexBeautifier.beautify(shardingKey)));
+                        }
+                    } else if (candidateIndexes.size() > 1){
+                        holder.registerProblem(method,
+                                InspectionBundle.message("inspection.QueryIndexingQualityInspection.queryCoveredByMultipleIndexes",
+                                        perception.database(),
+                                        perception.collection(),
+                                        IndexBeautifier.beautify(candidateIndexes)));
+                    }
                 }
             }
         };

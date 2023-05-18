@@ -92,10 +92,11 @@ public class IndexUsageInlay implements InlayHintsProvider<NoSettings> {
 
             if (candidateIndexes.size() > 0) {
                 var index = candidateIndexes.get(0);
-                var representation = getFactory().smallText("Covered by " + index.toJson());
-                var rounded = getFactory().roundWithBackground(representation);
 
-                inlayHintsSink.addInlineElement(psiElement.getTextOffset(), true, rounded, true);
+                var representation = getFactory().smallText((index.shardKey() ? "[Sharded] " : "") + "Covered by " + index.toJson());
+                representation = getFactory().roundWithBackground(representation);
+
+                inlayHintsSink.addInlineElement(psiElement.getTextOffset(), true, representation, true);
             }
 
             return true;

@@ -1,6 +1,5 @@
 package cat.kmruiz.mongodb.services;
 
-import cat.kmruiz.mongodb.services.config.MongoDBConnectionConfiguration;
 import cat.kmruiz.mongodb.services.mql.MQLIndex;
 import cat.kmruiz.mongodb.services.mql.MQLQuery;
 import com.intellij.openapi.components.Service;
@@ -8,6 +7,7 @@ import com.intellij.openapi.project.Project;
 import com.mongodb.ConnectionString;
 import com.mongodb.client.MongoClient;
 import com.mongodb.client.MongoClients;
+import com.mongodb.client.model.Filters;
 import org.bson.Document;
 
 import java.util.ArrayList;
@@ -34,7 +34,7 @@ public final class MongoDBFacade {
     }
 
     public ConnectionAwareResult<List<MQLIndex>> candidateIndexesForQuery(String database, String collection, MQLQuery query) {
-        if (!assertConnection()) {
+        if (assertOfflineMode()) {
             return ConnectionAwareResult.disconnected();
         }
 
@@ -60,16 +60,38 @@ public final class MongoDBFacade {
     }
 
     public ConnectionAwareResult<List<MQLIndex>> indexesOfCollection(String database, String collection) {
-        if (!assertConnection()) {
+        if (assertOfflineMode()) {
             return ConnectionAwareResult.disconnected();
         }
 
         var coll = this.client.getDatabase(database).getCollection(collection);
-        var result = coll.listIndexes().map(MQLIndex::parseIndex).into(new ArrayList<>());
-        return ConnectionAwareResult.resulting(result);
+        var shardingColl = this.client.getDatabase("config").getCollection("collections");
+        var shardInfo = shardingColl.find(Filters.eq("_id", "%s.%s".formatted(database, collection))).limit(1).into(new ArrayList<>(1));
+        var indexList = coll.listIndexes();
+
+        if (shardInfo.isEmpty()) {
+            var result = indexList.map(MQLIndex::parseIndex).into(new ArrayList<>());
+            return ConnectionAwareResult.resulting(result);
+        } else {
+            var shardKey = MQLIndex.parseIndex(shardInfo.get(0));
+            var result = indexList.map(MQLIndex::parseIndex).map(index -> index.isSameAs(shardKey) ? index.markAsShardingKey() : index).into(new ArrayList<>());
+            return ConnectionAwareResult.resulting(result);
+        }
+
     }
 
-    private boolean assertConnection() {
+    public ConnectionAwareResult<Boolean> isCollectionSharded(String database, String collection) {
+        if (assertOfflineMode()) {
+            return ConnectionAwareResult.disconnected();
+        }
+
+        var shardingColl = this.client.getDatabase("config").getCollection("collections");
+        var shardInfo = shardingColl.find(Filters.eq("_id", "%s.%s".formatted(database, collection))).limit(1).into(new ArrayList<>(1));
+
+        return ConnectionAwareResult.resulting(!shardInfo.isEmpty());
+    }
+
+    private boolean assertOfflineMode() {
         if (this.configurationResolver == null) {
             this.configurationResolver = currentProject.getService(MongoDBConfigurationResolver.class);
         }
@@ -77,12 +99,12 @@ public final class MongoDBFacade {
         if (this.client == null) {
             var configuration = this.configurationResolver.getMongoDBConnectionConfiguration();
             if (!configuration.isConfigured()) {
-                return false;
+                return true;
             }
 
             this.client = MongoClients.create(new ConnectionString(configuration.url()));
         }
 
-        return true;
+        return false;
     }
 }

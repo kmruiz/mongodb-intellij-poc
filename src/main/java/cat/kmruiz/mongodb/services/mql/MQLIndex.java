@@ -1,10 +1,11 @@
 package cat.kmruiz.mongodb.services.mql;
 
+import cat.kmruiz.mongodb.infrastructure.language.ListOperation;
 import org.bson.Document;
 
 import java.util.List;
 
-public record MQLIndex(String indexName, List<MQLIndexField> definition) {
+public record MQLIndex(String indexName, List<MQLIndexField> definition, boolean shardKey) {
     enum MQLIndexType {
         ASC("1"),
         DESC("-1"),
@@ -43,7 +44,19 @@ public record MQLIndex(String indexName, List<MQLIndexField> definition) {
             });
         }).toList();
 
-        return new MQLIndex(name, parsedDef);
+        return new MQLIndex(name, parsedDef, false);
+    }
+
+    public MQLIndex markAsShardingKey() {
+        return new MQLIndex(indexName, definition, true);
+    }
+
+    public boolean isSameAs(MQLIndex otherIndex) {
+        return ListOperation.zip(definition, otherIndex.definition)
+                .stream().allMatch(zipped ->
+                        zipped.left().fieldName.equals(zipped.right().fieldName) &&
+                                zipped.left().type.equals(zipped.right().type)
+                );
     }
 
     public String toJson() {
