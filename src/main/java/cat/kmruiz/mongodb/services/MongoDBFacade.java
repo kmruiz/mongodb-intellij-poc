@@ -1,6 +1,8 @@
 package cat.kmruiz.mongodb.services;
 
 import cat.kmruiz.mongodb.services.config.MongoDBConnectionConfiguration;
+import cat.kmruiz.mongodb.services.mql.MQLIndex;
+import cat.kmruiz.mongodb.services.mql.MQLQuery;
 import com.intellij.openapi.components.Service;
 import com.intellij.openapi.project.Project;
 import com.mongodb.ConnectionString;
@@ -31,13 +33,39 @@ public final class MongoDBFacade {
         this.currentProject = project;
     }
 
-    public ConnectionAwareResult<List<Document>> indexesOfCollection(String database, String collection) {
+    public ConnectionAwareResult<List<MQLIndex>> candidateIndexesForQuery(String database, String collection, MQLQuery query) {
+        if (!assertConnection()) {
+            return ConnectionAwareResult.disconnected();
+        }
+
+        var allIndexes = indexesOfCollection(database, collection).result();
+        var candidateIndexes = new ArrayList<MQLIndex>();
+
+        for (var index : allIndexes) {
+            index: for (var indexField : index.definition()) {
+                for (MQLQuery.MQLQueryField field : query.fields()) {
+                    if (field.wildcard()) {
+                        continue;
+                    }
+
+                    if (indexField.fieldName().equals(field.fieldName())) {
+                        candidateIndexes.add(index);
+                        break index;
+                    }
+                }
+            }
+        }
+
+        return ConnectionAwareResult.resulting(candidateIndexes);
+    }
+
+    public ConnectionAwareResult<List<MQLIndex>> indexesOfCollection(String database, String collection) {
         if (!assertConnection()) {
             return ConnectionAwareResult.disconnected();
         }
 
         var coll = this.client.getDatabase(database).getCollection(collection);
-        var result = coll.listIndexes().into(new ArrayList<>());
+        var result = coll.listIndexes().map(MQLIndex::parseIndex).into(new ArrayList<>());
         return ConnectionAwareResult.resulting(result);
     }
 

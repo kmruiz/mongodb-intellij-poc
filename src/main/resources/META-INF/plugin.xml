@@ -29,6 +29,8 @@
                            displayType="BALLOON"
                            key="cat.kmruiz.mongodb.notification.group"/>
 
+        <codeInsight.inlayProvider language="JAVA" implementationClass="cat.kmruiz.mongodb.lang.java.inlay.IndexUsageInlay"/>
+
         <localInspection language="JAVA"
                          bundle="messages.InspectionBundle"
                          key="inspection.QueryIndexingQualityInspection"

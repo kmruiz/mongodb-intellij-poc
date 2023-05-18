@@ -2,12 +2,15 @@ package cat.kmruiz.mongodb.lang.java;
 
 import cat.kmruiz.mongodb.lang.java.perception.MQLQueryPerception;
 import cat.kmruiz.mongodb.services.MongoDBFacade;
+import cat.kmruiz.mongodb.services.mql.MQLIndex;
 import cat.kmruiz.mongodb.ui.IndexBeautifier;
 import cat.kmruiz.mongodb.ui.InspectionBundle;
 import com.intellij.codeInspection.AbstractBaseJavaLocalInspectionTool;
 import com.intellij.codeInspection.ProblemsHolder;
-import com.intellij.psi.*;
-import org.bson.Document;
+import com.intellij.openapi.util.Key;
+import com.intellij.psi.JavaElementVisitor;
+import com.intellij.psi.PsiElementVisitor;
+import com.intellij.psi.PsiMethod;
 import org.jetbrains.annotations.NotNull;
 
 public class QueryIndexingQualityInspection extends AbstractBaseJavaLocalInspectionTool {
@@ -30,11 +33,30 @@ public class QueryIndexingQualityInspection extends AbstractBaseJavaLocalInspect
                     return;
                 }
 
-                holder.registerProblem(method,
-                        InspectionBundle.message("inspection.QueryIndexingQualityInspection.messageTemplate",
-                                perception.database(),
-                                perception.collection(),
-                                IndexBeautifier.beautify(indexes.result())));
+                var query = perception.query();
+                var candidateIndexes = facade.candidateIndexesForQuery(perception.database(), perception.collection(), query).result();
+
+                if (query.hasWildcardField() && query.hasHighCardinality()) {
+                    holder.registerProblem(method,
+                            InspectionBundle.message("inspection.QueryIndexingQualityInspection.queryMightUseTheAttributePattern",
+                                    perception.database(),
+                                    perception.collection(),
+                                    IndexBeautifier.beautify(indexes.result())));
+                    return;
+                } else if (candidateIndexes.isEmpty()) {
+                    holder.registerProblem(method,
+                            InspectionBundle.message("inspection.QueryIndexingQualityInspection.basicQueryNotCovered",
+                                    perception.database(),
+                                    perception.collection(),
+                                    IndexBeautifier.beautify(indexes.result())));
+                    return;
+                } else if (candidateIndexes.size() > 1) {
+                    holder.registerProblem(method,
+                            InspectionBundle.message("inspection.QueryIndexingQualityInspection.queryCoveredByMultipleIndexes",
+                                    perception.database(),
+                                    perception.collection(),
+                                    IndexBeautifier.beautify(candidateIndexes)));
+                }
             }
         };
     }
