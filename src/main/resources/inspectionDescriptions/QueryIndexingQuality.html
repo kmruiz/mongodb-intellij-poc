@@ -1,0 +1,21 @@
+<html lang="en">
+<body>
+<p>
+    Detects queries that potentially impact cluster performance due to not using proper indexes.
+</p>
+<!-- tooltip end -->
+<p>Queries not using proper indexes force MongoDB to run a COLLSCAN. <b>COLLSCAN stages loads all your data from disk into
+memory, and filters documents one by one.</b> This means that they are the most expensive queries and should be avoided.
+
+<p>Consider creating an index to cover this query following indexing best practices.</p>
+
+<ul>
+    <li><a href="https://learn.mongodb.com/courses/m201-mongodb-performance">
+        MongoDB University M201 - MongoDB Performance
+    </a></li>
+    <li><a href="https://www.mongodb.com/blog/post/performance-best-practices-indexing">
+        Performance Best Practices: Indexing
+    </a></li>
+</ul>
+</body>
+</html>

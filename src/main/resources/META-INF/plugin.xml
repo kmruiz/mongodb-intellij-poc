@@ -1,0 +1,49 @@
+<!-- Plugin Configuration File. Read more: https://plugins.jetbrains.com/docs/intellij/plugin-configuration-file.html -->
+<idea-plugin>
+    <!-- Unique identifier of the plugin. It should be FQN. It cannot be changed between the plugin versions. -->
+    <id>cat.kmruiz.mongodb</id>
+
+    <!-- Public plugin name should be written in Title Case.
+         Guidelines: https://plugins.jetbrains.com/docs/marketplace/plugin-overview-page.html#plugin-name -->
+    <name>Intelli-Sense MongoDB Integration</name>
+
+    <!-- A displayed Vendor name or Organization ID displayed on the Plugins Page. -->
+    <vendor email="kevin.mas@hey.com" url="https://github.com/kmruiz">Kevin Mas Ruiz</vendor>
+
+    <!-- Description of the plugin displayed on the Plugin Page and IDE Plugin Manager.
+         Simple HTML elements (text formatting, paragraphs, and lists) can be added inside of <![CDATA[ ]]> tag.
+         Guidelines: https://plugins.jetbrains.com/docs/marketplace/plugin-overview-page.html#plugin-description -->
+    <description><![CDATA[
+    Enjoy working with MongoDB and Java with autocompletion, intelli-sense suggestions based on defined queries and indexes.<br>
+  ]]></description>
+
+    <!-- Product and plugin compatibility requirements.
+         Read more: https://plugins.jetbrains.com/docs/intellij/plugin-compatibility.html -->
+    <depends>com.intellij.modules.platform</depends>
+    <depends>com.intellij.java</depends>
+
+    <!-- Extension points defined by the plugin.
+         Read more: https://plugins.jetbrains.com/docs/intellij/plugin-extension-points.html -->
+    <extensions defaultExtensionNs="com.intellij">
+        <notificationGroup id="MongoDB Plugin"
+                           displayType="BALLOON"
+                           key="cat.kmruiz.mongodb.notification.group"/>
+
+        <localInspection language="JAVA"
+                         bundle="messages.InspectionBundle"
+                         key="inspection.QueryIndexingQualityInspection"
+                         groupPath="Java"
+                         groupBundle="messages.configuration"
+                         groupKey="inspection.probable.mongodb.performance.issues"
+                         enabledByDefault="true"
+                         level="WARNING"
+                         implementationClass="cat.kmruiz.mongodb.lang.java.QueryIndexingQualityInspection"/>
+    </extensions>
+
+    <applicationListeners>
+        <listener class="cat.kmruiz.mongodb.ProjectListener"
+                  topic="com.intellij.openapi.project.ProjectManagerListener"/>
+    </applicationListeners>
+
+
+</idea-plugin>
