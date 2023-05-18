@@ -40,8 +40,7 @@ public class QueryIndexingQualityInspection extends AbstractBaseJavaLocalInspect
                     holder.registerProblem(method,
                             InspectionBundle.message("inspection.QueryIndexingQualityInspection.queryMightUseTheAttributePattern",
                                     perception.database(),
-                                    perception.collection(),
-                                    IndexBeautifier.beautify(indexes.result())));
+                                    perception.collection()));
                 } else if (candidateIndexes.isEmpty()) {
                     holder.registerProblem(method,
                             InspectionBundle.message("inspection.QueryIndexingQualityInspection.basicQueryNotCovered",
