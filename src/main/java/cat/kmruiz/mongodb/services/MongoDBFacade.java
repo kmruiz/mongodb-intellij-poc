@@ -11,6 +11,7 @@ import com.mongodb.client.model.Filters;
 import org.bson.Document;
 
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.List;
 
 @Service(Service.Level.PROJECT)
@@ -56,6 +57,15 @@ public final class MongoDBFacade {
             }
         }
 
+        candidateIndexes.sort((a, b) -> {
+            if (a.shardKey()) {
+                return -1;
+            } else if (b.shardKey()) {
+                return 1;
+            } else {
+                return Integer.compare(b.definition().size(), a.definition().size());
+            }
+        });
         return ConnectionAwareResult.resulting(candidateIndexes);
     }
 

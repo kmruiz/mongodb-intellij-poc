@@ -10,6 +10,7 @@ import com.intellij.openapi.editor.Editor;
 import com.intellij.psi.PsiElement;
 import com.intellij.psi.PsiFile;
 import com.intellij.psi.PsiMethod;
+import com.intellij.psi.PsiMethodCallExpression;
 import org.jetbrains.annotations.Nls;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
@@ -78,11 +79,16 @@ public class IndexUsageInlay implements InlayHintsProvider<NoSettings> {
 
         @Override
         public boolean collect(@NotNull PsiElement psiElement, @NotNull Editor editor, @NotNull InlayHintsSink inlayHintsSink) {
-            if (!(psiElement instanceof PsiMethod method)) {
+            MQLQueryPerception.MQLQueryOrNotPerceived perception = null;
+
+            if ((psiElement instanceof PsiMethod method)) {
+                perception = queryPerception.parse(method);
+            } else if ((psiElement instanceof PsiMethodCallExpression methodCall)) {
+                perception = queryPerception.parse(methodCall);
+            } else {
                 return true;
             }
 
-            var perception = queryPerception.parse(method);
             if (!perception.hasBeenPerceived()) {
                 return true;
             }
@@ -90,10 +96,10 @@ public class IndexUsageInlay implements InlayHintsProvider<NoSettings> {
             var query = perception.query();
             var candidateIndexes = facade.candidateIndexesForQuery(perception.database(), perception.collection(), query).result();
 
-            if (candidateIndexes.size() > 0) {
+            if (!candidateIndexes.isEmpty()) {
                 var index = candidateIndexes.get(0);
 
-                var representation = getFactory().smallText((index.shardKey() ? "[Sharded] " : "") + "Covered by " + index.toJson());
+                var representation = getFactory().smallText((index.shardKey() ? "[Sharding Key] " : "") + index.toJson());
                 representation = getFactory().roundWithBackground(representation);
 
                 inlayHintsSink.addInlineElement(psiElement.getTextOffset(), true, representation, true);

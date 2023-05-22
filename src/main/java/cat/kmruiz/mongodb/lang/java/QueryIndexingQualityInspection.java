@@ -7,9 +7,7 @@ import cat.kmruiz.mongodb.ui.IndexBeautifier;
 import cat.kmruiz.mongodb.ui.InspectionBundle;
 import com.intellij.codeInspection.AbstractBaseJavaLocalInspectionTool;
 import com.intellij.codeInspection.ProblemsHolder;
-import com.intellij.psi.JavaElementVisitor;
-import com.intellij.psi.PsiElementVisitor;
-import com.intellij.psi.PsiMethod;
+import com.intellij.psi.*;
 import org.jetbrains.annotations.NotNull;
 
 public class QueryIndexingQualityInspection extends AbstractBaseJavaLocalInspectionTool {
@@ -21,12 +19,30 @@ public class QueryIndexingQualityInspection extends AbstractBaseJavaLocalInspect
 
         return new JavaElementVisitor() {
             @Override
+            public void visitMethodCallExpression(PsiMethodCallExpression expression) {
+                var owningClass = expression.resolveMethod().getContainingClass();
+
+                if (owningClass.getQualifiedName().equals("com.mongodb.client.MongoCollection")) {
+                    var perception = queryPerception.parse(expression);
+                    if (!perception.hasBeenPerceived()) {
+                        return;
+                    }
+
+                    handlePerception(expression, perception);
+                }
+            }
+
+            @Override
             public void visitMethod(PsiMethod method) {
                 var perception = queryPerception.parse(method);
                 if (!perception.hasBeenPerceived()) {
                     return;
                 }
 
+                handlePerception(method, perception);
+            }
+
+            private void handlePerception(PsiElement member, MQLQueryPerception.MQLQueryOrNotPerceived perception) {
                 var indexes = facade.indexesOfCollection(perception.database(), perception.collection());
                 if (!indexes.connected()) {
                     return;
@@ -37,12 +53,12 @@ public class QueryIndexingQualityInspection extends AbstractBaseJavaLocalInspect
                 var isCollectionSharded = facade.isCollectionSharded(perception.database(), perception.collection()).result();
 
                 if (query.hasWildcardField() && query.hasHighCardinality()) {
-                    holder.registerProblem(method,
+                    holder.registerProblem(member,
                             InspectionBundle.message("inspection.QueryIndexingQualityInspection.queryMightUseTheAttributePattern",
                                     perception.database(),
                                     perception.collection()));
                 } else if (candidateIndexes.isEmpty()) {
-                    holder.registerProblem(method,
+                    holder.registerProblem(member,
                             InspectionBundle.message("inspection.QueryIndexingQualityInspection.basicQueryNotCovered",
                                     perception.database(),
                                     perception.collection(),
@@ -53,7 +69,7 @@ public class QueryIndexingQualityInspection extends AbstractBaseJavaLocalInspect
                         if (!canUseShardingKey) {
                             var shardingKey = indexes.result().stream().filter(MQLIndex::shardKey).findFirst().get();
 
-                            holder.registerProblem(method,
+                            holder.registerProblem(member,
                                     InspectionBundle.message("inspection.QueryIndexingQualityInspection.indexIsNotShardKey",
                                             perception.database(),
                                             perception.collection(),
@@ -61,7 +77,7 @@ public class QueryIndexingQualityInspection extends AbstractBaseJavaLocalInspect
                                             IndexBeautifier.beautify(shardingKey)));
                         }
                     } else if (candidateIndexes.size() > 1){
-                        holder.registerProblem(method,
+                        holder.registerProblem(member,
                                 InspectionBundle.message("inspection.QueryIndexingQualityInspection.queryCoveredByMultipleIndexes",
                                         perception.database(),
                                         perception.collection(),

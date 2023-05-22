@@ -21,8 +21,34 @@ public class MQLQueryPerception {
         }
     }
 
+    public MQLQueryOrNotPerceived parse(@NotNull PsiMethodCallExpression methodCall) {
+        var methodRefCall = methodCall.getMethodExpression().getCanonicalText();
+        var queryDescription = new LinkedHashSet<MQLQuery.MQLQueryField>();
+
+        if (
+                methodRefCall.endsWith("find") ||
+                        methodRefCall.endsWith("findOne")
+        ) {
+            var args = methodCall.getArgumentList();
+            var argsTypes = args.getExpressionTypes();
+
+            if (args.getExpressionCount() == 0) {
+                return MQLQueryOrNotPerceived.notPerceived();
+            }
+
+            if (argsTypes[0].equalsToText("org.bson.Document") || argsTypes[0].equalsToText("org.bson.conversions.Bson")) {
+                resolveBsonDocumentChain(args.getExpressions()[0], queryDescription);
+            } else if (argsTypes.length > 1) { // session is the first parameter, so the query is the second
+                resolveBsonDocumentChain(args.getExpressions()[1], queryDescription);
+            }
+        }
+
+        return MQLQueryOrNotPerceived.perceived("test", "test", new MQLQuery(methodCall, queryDescription));
+    }
+
     public MQLQueryOrNotPerceived parse(@NotNull PsiMethod method) {
-        if (!method.getReturnType().equalsToText("org.bson.Document")) {
+        var returnType = method.getReturnType();
+        if (returnType == null || !returnType.equalsToText("org.bson.Document")) {
             return MQLQueryOrNotPerceived.notPerceived();
         }
 
@@ -53,10 +79,59 @@ public class MQLQueryPerception {
                 }
             }
         } else if (expr instanceof PsiMethodCallExpression methodCall) {
+            var method = methodCall.resolveMethod();
+            var methodClass = method.getContainingClass();
+            var methodArgTypes = methodCall.getTypeArguments();
             var methodArgs = methodCall.getArgumentList().getExpressions();
             var leftExpr = methodCall.getMethodExpression();
 
-            if (leftExpr.getType().equalsToText("org.bson.Document")) {
+            if (methodClass.getQualifiedName().equals("com.mongodb.client.model.Filters")) {
+                switch (method.getName()) {
+                    case "eq":
+                    case "ne":
+                    case "gt":
+                    case "lt":
+                    case "gte":
+                    case "lte":
+                    case "in":
+                    case "nin":
+                    case "exists":
+                    case "type":
+                    case "mod":
+                    case "regex":
+                    case "all":
+                    case "elemMatch":
+                    case "size":
+                    case "bitsAllClear":
+                    case "bitsAllSet":
+                    case "bitsAnyClear":
+                    case "bitsAnySet":
+                    case "geoWithin":
+                    case "geoWithinBox":
+                    case "geoWithinPolygon":
+                    case "geoWithinCenter":
+                    case "geoWithinCenterSphere":
+                    case "geoIntersects":
+                    case "near":
+                    case "nearSphere":
+                        queryDescription.add(resolveMQLQueryField(methodArgs[0]));
+                        break;
+                    case "and":
+                    case "or":
+                    case "nor":
+                        if (method.isVarArgs()) {
+                            for (var arg : methodArgs) {
+                                resolveBsonDocumentChain(arg, queryDescription);
+                            }
+                        }
+                        break;
+                    default:
+                }
+            }
+
+            if (leftExpr.getType().equalsToText("org.bson.Document") || leftExpr.getType().equalsToText("org.bson.conversions.Bson")) {
+                resolveBsonDocumentChain(leftExpr.getQualifierExpression(), queryDescription);
+            } else if (leftExpr.getType().equalsToText("org.bson.Document") || leftExpr.getType().equalsToText("org.bson.conversions.Bson")) {
                 resolveBsonDocumentChain(leftExpr.getQualifierExpression(), queryDescription);
             }
 
@@ -75,4 +150,5 @@ public class MQLQueryPerception {
             return MQLQuery.MQLQueryField.newWildcard();
         }
     }
+
 }
