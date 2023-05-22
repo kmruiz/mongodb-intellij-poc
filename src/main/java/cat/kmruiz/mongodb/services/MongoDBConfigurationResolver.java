@@ -49,7 +49,7 @@ public final class MongoDBConfigurationResolver {
                 byReadonly = ds;
             }
 
-            if (ds.getComment().startsWith("[MongoDB Plugin]")) {
+            if (ds.getComment() != null && ds.getComment().startsWith("[MongoDB Plugin]")) {
                 byComment = ds;
             }
         }
