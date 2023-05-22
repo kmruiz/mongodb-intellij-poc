@@ -8,12 +8,9 @@ import com.mongodb.ConnectionString;
 import com.mongodb.client.MongoClient;
 import com.mongodb.client.MongoClients;
 import com.mongodb.client.model.Filters;
-import org.bson.Document;
 
 import java.util.ArrayList;
-import java.util.Comparator;
 import java.util.List;
-import java.util.concurrent.atomic.AtomicBoolean;
 
 @Service(Service.Level.PROJECT)
 public final class MongoDBFacade {

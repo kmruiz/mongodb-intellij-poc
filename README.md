@@ -14,11 +14,7 @@ code and adds suggestions and warnings for wrong index usage.
 It will pop up an IntelliJ Community version. Create a new Java project with Maven or Gradle and add MongoDB driver
 dependency.
 
-2. Create in the root of the new project a .mongodb file and add the URL of a cluster.
-
-If you are starting a new cluster in your local machine, you can just write:
-
-```mongodb://localhost```
+2. Create a new MongoDB connection in the databases view.
 
 :warning: Now it assumes that all queries run in the namespace `test.test` :warning:
 
