@@ -20,7 +20,7 @@ If you are starting a new cluster in your local machine, you can just write:
 
 ```mongodb://localhost```
 
-:warning: Now it assumes that all queries run in the database `test.test` :warning:
+:warning: Now it assumes that all queries run in the namespace `test.test` :warning:
 
 ## Features
 
