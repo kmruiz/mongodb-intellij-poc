@@ -1,6 +1,6 @@
 # mongodb plugin for intellij poc
 
-:warn: This is not a production-ready plugin and not supported by MongoDB in any means. :warn:
+:warning::fire: This is not a production-ready plugin and not supported by MongoDB in any means. :fire::warning:
 
 This plugin provides basic intelli-sense for MongoDB. It connects to a MongoDB cluster, detects basic patterns in your
 code and adds suggestions and warnings for wrong index usage.
