@@ -6,6 +6,7 @@ import com.intellij.database.dataSource.LocalDataSource;
 import com.intellij.database.psi.DataSourceManager;
 import com.intellij.openapi.components.Service;
 import com.intellij.openapi.project.Project;
+import org.jetbrains.annotations.NotNull;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -37,21 +38,45 @@ public final class MongoDBConfigurationResolver {
         }
 
         if (dataSources.size() == 1) {
-            var ds = dataSources.get(0).getConnectionConfig();
-            var dataSourceName = ds.getName();
+            return forDataSource(dataSources.get(0));
+        }
 
-            if (!connectedDatasources.contains(dataSourceName)) {
-                NotificationSystem.getInstance(currentProject)
-                        .showInfo("[MongoDB Plugin] Connected to " + dataSourceName);
-                connectedDatasources.add(dataSourceName);
+        LocalDataSource byReadonly = null, byComment = null;
+
+        // try to deduce what is the best DS
+        for (var ds : dataSources) {
+            if (ds.isReadOnly()) {
+                byReadonly = ds;
             }
 
-            return MongoDBConnectionConfiguration.configured(ds.getUrl());
+            if (ds.getComment().startsWith("[MongoDB Plugin]")) {
+                byComment = ds;
+            }
+        }
+
+        if (byComment != null) {
+            return forDataSource(byComment);
+        }
+
+        if (byReadonly != null) {
+            return forDataSource(byReadonly);
         }
 
         NotificationSystem.getInstance(currentProject)
                 .showWarning("[MongoDB Plugin] Could not connect to a MongoDB datasource because multiple are configured.");
 
         return MongoDBConnectionConfiguration.notConfigured();
+    }
+
+    private MongoDBConnectionConfiguration forDataSource(@NotNull LocalDataSource dataSource) {
+        var connectionConfig = dataSource.getConnectionConfig();
+        var dataSourceName = connectionConfig.getName();
+
+        if (!connectedDatasources.contains(dataSourceName)) {
+            NotificationSystem.getInstance(currentProject).showInfo("[MongoDB Plugin] Connected to " + dataSourceName);
+            connectedDatasources.add(dataSourceName);
+        }
+
+        return MongoDBConnectionConfiguration.configured(connectionConfig.getUrl());
     }
 }
