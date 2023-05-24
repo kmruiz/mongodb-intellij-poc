@@ -67,4 +67,11 @@ public record MQLIndex(String indexName, List<MQLIndexField> definition, boolean
                         String.join(",", definition.stream().map(MQLIndexField::toJson).toList())
                 );
     }
+
+    public String toCreationJson() {
+        return "{%s}"
+                .formatted(
+                        String.join(",", definition.stream().map(MQLIndexField::toJson).toList())
+                );
+    }
 }

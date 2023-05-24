@@ -1,6 +1,7 @@
 package cat.kmruiz.mongodb.lang.java;
 
 import cat.kmruiz.mongodb.lang.java.perception.MQLQueryPerception;
+import cat.kmruiz.mongodb.lang.java.quickfix.DeduceIndexQuickFix;
 import cat.kmruiz.mongodb.services.MongoDBFacade;
 import cat.kmruiz.mongodb.services.mql.MQLIndex;
 import cat.kmruiz.mongodb.ui.IndexBeautifier;
@@ -62,7 +63,8 @@ public class QueryIndexingQualityInspection extends AbstractBaseJavaLocalInspect
                             InspectionBundle.message("inspection.QueryIndexingQualityInspection.basicQueryNotCovered",
                                     perception.database(),
                                     perception.collection(),
-                                    IndexBeautifier.beautify(indexes.result())));
+                                    IndexBeautifier.beautify(indexes.result())),
+                            new DeduceIndexQuickFix(perception.database(), perception.collection(), query));
                 } else {
                     if (isCollectionSharded) {
                         var canUseShardingKey = candidateIndexes.stream().anyMatch(MQLIndex::shardKey);

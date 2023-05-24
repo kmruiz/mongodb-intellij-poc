@@ -18,7 +18,14 @@ public record MQLQuery(PsiElement parent, LinkedHashSet<MQLQueryField> fields) {
     public boolean hasWildcardField() {
         return fields.stream().anyMatch(MQLQueryField::wildcard);
     }
+
     public boolean hasHighCardinality() {
         return fields.size() > 3;
+    }
+
+    public MQLIndex deduceIndex() {
+        return new MQLIndex(null,
+                fields.stream().map(e -> new MQLIndex.MQLIndexField(e.fieldName, MQLIndex.MQLIndexType.ASC)).toList(),
+                false);
     }
 }
