@@ -80,8 +80,11 @@ public class MQLQueryPerception {
             }
         } else if (expr instanceof PsiMethodCallExpression methodCall) {
             var method = methodCall.resolveMethod();
+            if (method == null) {
+                return;
+            }
+
             var methodClass = method.getContainingClass();
-            var methodArgTypes = methodCall.getTypeArguments();
             var methodArgs = methodCall.getArgumentList().getExpressions();
             var leftExpr = methodCall.getMethodExpression();
 

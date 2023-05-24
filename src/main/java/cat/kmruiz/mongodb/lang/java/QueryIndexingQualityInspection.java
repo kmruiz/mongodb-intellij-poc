@@ -2,6 +2,7 @@ package cat.kmruiz.mongodb.lang.java;
 
 import cat.kmruiz.mongodb.lang.java.perception.MQLQueryPerception;
 import cat.kmruiz.mongodb.lang.java.quickfix.DeduceIndexQuickFix;
+import cat.kmruiz.mongodb.lang.java.quickfix.RunQueryOnSecondaryNode;
 import cat.kmruiz.mongodb.services.MongoDBFacade;
 import cat.kmruiz.mongodb.services.mql.MQLIndex;
 import cat.kmruiz.mongodb.ui.IndexBeautifier;
@@ -21,7 +22,13 @@ public class QueryIndexingQualityInspection extends AbstractBaseJavaLocalInspect
         return new JavaElementVisitor() {
             @Override
             public void visitMethodCallExpression(PsiMethodCallExpression expression) {
-                var owningClass = expression.resolveMethod().getContainingClass();
+                var resolvedMethod = expression.resolveMethod();
+
+                if (resolvedMethod == null) {
+                    return;
+                }
+
+                var owningClass = resolvedMethod.getContainingClass();
 
                 if (owningClass.getQualifiedName().equals("com.mongodb.client.MongoCollection")) {
                     var perception = queryPerception.parse(expression);
@@ -57,13 +64,15 @@ public class QueryIndexingQualityInspection extends AbstractBaseJavaLocalInspect
                     holder.registerProblem(member,
                             InspectionBundle.message("inspection.QueryIndexingQualityInspection.queryMightUseTheAttributePattern",
                                     perception.database(),
-                                    perception.collection()));
+                                    perception.collection()),
+                            new RunQueryOnSecondaryNode());
                 } else if (candidateIndexes.isEmpty()) {
                     holder.registerProblem(member,
                             InspectionBundle.message("inspection.QueryIndexingQualityInspection.basicQueryNotCovered",
                                     perception.database(),
                                     perception.collection(),
                                     IndexBeautifier.beautify(indexes.result())),
+                            new RunQueryOnSecondaryNode(),
                             new DeduceIndexQuickFix(perception.database(), perception.collection(), query));
                 } else {
                     if (isCollectionSharded) {
@@ -76,7 +85,8 @@ public class QueryIndexingQualityInspection extends AbstractBaseJavaLocalInspect
                                             perception.database(),
                                             perception.collection(),
                                             IndexBeautifier.beautify(candidateIndexes.get(0)),
-                                            IndexBeautifier.beautify(shardingKey)));
+                                            IndexBeautifier.beautify(shardingKey)),
+                                    new RunQueryOnSecondaryNode());
                         }
                     } else if (candidateIndexes.size() > 1){
                         holder.registerProblem(member,

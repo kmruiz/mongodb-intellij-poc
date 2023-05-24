@@ -2,15 +2,17 @@ package cat.kmruiz.mongodb.services;
 
 import cat.kmruiz.mongodb.services.mql.MQLIndex;
 import cat.kmruiz.mongodb.services.mql.MQLQuery;
+import cat.kmruiz.mongodb.services.schema.CollectionSchema;
 import com.intellij.openapi.components.Service;
 import com.intellij.openapi.project.Project;
 import com.mongodb.ConnectionString;
+import com.mongodb.ReadPreference;
 import com.mongodb.client.MongoClient;
 import com.mongodb.client.MongoClients;
+import com.mongodb.client.model.Aggregates;
 import com.mongodb.client.model.Filters;
 
-import java.util.ArrayList;
-import java.util.List;
+import java.util.*;
 
 @Service(Service.Level.PROJECT)
 public final class MongoDBFacade {
@@ -41,7 +43,8 @@ public final class MongoDBFacade {
         var candidateIndexes = new ArrayList<MQLIndex>();
 
         for (var index : allIndexes) {
-            index: for (var indexField : index.definition()) {
+            index:
+            for (var indexField : index.definition()) {
                 for (MQLQuery.MQLQueryField field : query.fields()) {
                     if (field.wildcard()) {
                         continue;
@@ -97,6 +100,28 @@ public final class MongoDBFacade {
         var shardInfo = shardingColl.find(Filters.eq("_id", "%s.%s".formatted(database, collection))).limit(1).into(new ArrayList<>(1));
 
         return ConnectionAwareResult.resulting(!shardInfo.isEmpty());
+    }
+
+    public ConnectionAwareResult<CollectionSchema> schemaOf(String database, String collection) {
+        if (assertOfflineMode()) {
+            return ConnectionAwareResult.disconnected();
+        }
+
+        var indexes = indexesOfCollection(database, collection).result();
+        var indexedFields = new HashSet<String>();
+
+        for (var idx : indexes) {
+            indexedFields.addAll(idx.definition().stream().map(MQLIndex.MQLIndexField::fieldName).toList());
+        }
+
+        var coll = this.client.getDatabase(database).getCollection(collection);
+        var resultDocs = coll.aggregate(Collections.singletonList(Aggregates.sample(500))).batchSize(500).into(new ArrayList<>());
+        var schema = new CollectionSchema(database, collection, new HashMap<>());
+        for (var doc : resultDocs) {
+            schema = schema.merge(indexedFields, doc);
+        }
+
+        return ConnectionAwareResult.resulting(schema);
     }
 
     private boolean assertOfflineMode() {
