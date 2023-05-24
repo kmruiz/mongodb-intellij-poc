@@ -49,12 +49,16 @@ public class MongoDBSchemaCompletionContributor extends CompletionContributor {
                                 tailText = " [Indexed] " + tailText;
                             }
 
-                            result.addElement(LookupElementBuilder
-                                    .create(fieldName)
-                                    .withTailText(tailText)
-                                    .withIcon(MONGODB_ICON)
-                                    .withBoldness(value.isIndexed())
-                                    .withItemTextForeground(value.isIndexed() ? JBColor.GREEN : JBColor.GRAY)
+                            result.addElement(
+                                    PrioritizedLookupElement.withPriority(
+                                            LookupElementBuilder
+                                                    .create(fieldName)
+                                                    .withTailText(tailText)
+                                                    .withIcon(MONGODB_ICON)
+                                                    .withBoldness(value.isIndexed())
+                                                    .withItemTextForeground(value.isIndexed() ? JBColor.GREEN : JBColor.GRAY),
+                                            value.isIndexed() ? 150 : 50
+                                    )
                             );
                         }
                     }
