@@ -156,7 +156,7 @@ public class MQLQueryPerception {
 
     private MQLQuery.Predicate<PsiElement> resolveMQLQueryField(PsiExpression field, PsiExpression value, MongoDBFacade.ConnectionAwareResult<CollectionSchema> currentSchema) {
         var providedTypeOnQuery = inferTypeOf(value);
-        var warnings = new ArrayList<QueryWarning<PsiElement>>();
+        var warnings = new ArrayList<QueryWarning>();
 
         if (field instanceof PsiLiteralExpression literalExpr) {
             var fieldName = literalExpr.getValue().toString();
@@ -164,8 +164,7 @@ public class MQLQueryPerception {
                 var fieldValue = currentSchema.result().ofField(fieldName);
                 if (!fieldValue.supportsProvidedType(providedTypeOnQuery)) {
                     warnings.add(
-                            new QueryWarning<>(
-                                    value,
+                            new QueryWarning(
                                     InspectionBundle.message("inspection.MQLQueryPerception.warning.fieldTypeDoesNotMatch",
                                             fieldName,
                                             Strings.join(fieldValue.types(), ", "),
@@ -175,13 +174,13 @@ public class MQLQueryPerception {
                 }
             }
 
-            return MQLQuery.Predicate.named(fieldName, providedTypeOnQuery, warnings);
+            return MQLQuery.Predicate.named(field, value, fieldName, providedTypeOnQuery, warnings);
         } else {
             var resolvedField = inferConstantStringValue(field);
             if (resolvedField == null) {
-                return MQLQuery.Predicate.newWildcard(warnings);
+                return MQLQuery.Predicate.newWildcard(field, value, warnings);
             } else {
-                return MQLQuery.Predicate.named(resolvedField, providedTypeOnQuery, warnings);
+                return MQLQuery.Predicate.named(field,value, resolvedField, providedTypeOnQuery, warnings);
             }
         }
     }

@@ -8,13 +8,13 @@ import java.util.LinkedHashSet;
 import java.util.List;
 
 public record MQLQuery<Node>(PsiElement parent, LinkedHashSet<Predicate<Node>> predicates) {
-    public record Predicate<Node>(String fieldName, boolean wildcardField, CollectionSchema.FieldValue.Type fieldType, List<QueryWarning<Node>> warnings) {
-        public static <Node> Predicate<Node> newWildcard(List<QueryWarning<Node>> warning) {
-            return new Predicate<>(null, true, CollectionSchema.FieldValue.Type.ANY, warning);
+    public record Predicate<Node>(Node fieldNode, Node valueNode, String fieldName, boolean wildcardField, CollectionSchema.FieldValue.Type fieldType, List<QueryWarning> warnings) {
+        public static <Node> Predicate<Node> newWildcard(Node fieldNode, Node valueNode, List<QueryWarning> warning) {
+            return new Predicate<>(fieldNode, valueNode, null, true, CollectionSchema.FieldValue.Type.ANY, warning);
         }
 
-        public static <Node> Predicate<Node> named(String name, CollectionSchema.FieldValue.Type fieldType, List<QueryWarning<Node>> warning) {
-            return new Predicate<>(name, false, fieldType, warning);
+        public static <Node> Predicate<Node> named(Node fieldNode, Node valueNode, String name, CollectionSchema.FieldValue.Type fieldType, List<QueryWarning> warning) {
+            return new Predicate<>(fieldNode, valueNode, name, false, fieldType, warning);
         }
     }
 

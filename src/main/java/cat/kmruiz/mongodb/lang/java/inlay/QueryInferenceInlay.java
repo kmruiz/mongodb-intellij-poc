@@ -7,6 +7,7 @@ import com.intellij.codeInsight.hints.*;
 import com.intellij.lang.Language;
 import com.intellij.openapi.editor.Editor;
 import com.intellij.openapi.util.IconLoader;
+import com.intellij.openapi.util.text.Strings;
 import com.intellij.psi.PsiElement;
 import com.intellij.psi.PsiFile;
 import com.intellij.psi.PsiMethodCallExpression;
@@ -16,7 +17,7 @@ import org.jetbrains.annotations.Nullable;
 
 import javax.swing.*;
 
-public class IndexUsageInlay implements InlayHintsProvider<NoSettings> {
+public class QueryInferenceInlay implements InlayHintsProvider<NoSettings> {
     private static final Icon MONGODB_ICON = IconLoader.getIcon("/icons/mongodb-icon-small.png", MongoDBSchemaCompletionContributor.class);
 
     @Override
@@ -109,6 +110,11 @@ public class IndexUsageInlay implements InlayHintsProvider<NoSettings> {
 
             var query = perception.query();
             var candidateIndexes = facade.candidateIndexesForQuery(perception.database(), perception.collection(), query).result();
+
+            for (var predicate : query.predicates()) {
+                var fieldTypes = getFactory().text(": " + predicate.fieldType());
+                inlayHintsSink.addInlineElement(predicate.fieldNode().getTextOffset() + predicate.fieldNode().getTextLength(), true, fieldTypes, false);
+            }
 
             if (!candidateIndexes.isEmpty()) {
                 var index = candidateIndexes.get(0);

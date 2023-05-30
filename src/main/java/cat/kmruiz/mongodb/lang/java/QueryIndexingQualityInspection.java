@@ -59,7 +59,7 @@ public class QueryIndexingQualityInspection extends AbstractBaseJavaLocalInspect
 
                 for (var predicate : query.predicates()) {
                     for (var warning : predicate.warnings()) {
-                        holder.registerProblem(warning.on(), warning.message());
+                        holder.registerProblem(predicate.valueNode(), warning.message());
                     }
                 }
 
