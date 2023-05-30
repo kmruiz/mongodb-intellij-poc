@@ -112,7 +112,7 @@ public class QueryInferenceInlay implements InlayHintsProvider<NoSettings> {
             var candidateIndexes = facade.candidateIndexesForQuery(perception.database(), perception.collection(), query).result();
 
             for (var predicate : query.predicates()) {
-                var fieldTypes = getFactory().text(": " + predicate.fieldType());
+                var fieldTypes = getFactory().text(": " + Strings.join(predicate.types(), " | "));
                 inlayHintsSink.addInlineElement(predicate.fieldNode().getTextOffset() + predicate.fieldNode().getTextLength(), true, fieldTypes, false);
             }
 

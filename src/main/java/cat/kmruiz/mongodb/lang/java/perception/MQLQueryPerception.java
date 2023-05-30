@@ -157,30 +157,31 @@ public class MQLQueryPerception {
     private MQLQuery.Predicate<PsiElement> resolveMQLQueryField(PsiExpression field, PsiExpression value, MongoDBFacade.ConnectionAwareResult<CollectionSchema> currentSchema) {
         var providedTypeOnQuery = inferTypeOf(value);
         var warnings = new ArrayList<QueryWarning>();
+        CollectionSchema.FieldValue expectedTypeDef = null;
 
         if (field instanceof PsiLiteralExpression literalExpr) {
             var fieldName = literalExpr.getValue().toString();
             if (currentSchema.connected()) {
-                var fieldValue = currentSchema.result().ofField(fieldName);
-                if (!fieldValue.supportsProvidedType(providedTypeOnQuery)) {
+                expectedTypeDef = currentSchema.result().ofField(fieldName);
+                if (!expectedTypeDef.supportsProvidedType(providedTypeOnQuery)) {
                     warnings.add(
                             new QueryWarning(
                                     InspectionBundle.message("inspection.MQLQueryPerception.warning.fieldTypeDoesNotMatch",
                                             fieldName,
-                                            Strings.join(fieldValue.types(), ", "),
+                                            Strings.join(expectedTypeDef.types(), ", "),
                                             providedTypeOnQuery)
                             )
                     );
                 }
             }
 
-            return MQLQuery.Predicate.named(field, value, fieldName, providedTypeOnQuery, warnings);
+            return MQLQuery.Predicate.named(field, value, fieldName, providedTypeOnQuery, expectedTypeDef.types(), warnings);
         } else {
             var resolvedField = inferConstantStringValue(field);
             if (resolvedField == null) {
                 return MQLQuery.Predicate.newWildcard(field, value, warnings);
             } else {
-                return MQLQuery.Predicate.named(field,value, resolvedField, providedTypeOnQuery, warnings);
+                return MQLQuery.Predicate.named(field,value, resolvedField, providedTypeOnQuery, expectedTypeDef.types(), warnings);
             }
         }
     }
