@@ -92,6 +92,14 @@ public class IndexUsageInlay implements InlayHintsProvider<NoSettings> {
                 return true;
             }
 
+            if (perception.collectionDeclaration() != null) {
+                var icon = getFactory().icon(MONGODB_ICON);
+                var text = getFactory().smallText(perception.database() + "." + perception.collection());
+                text = getFactory().roundWithBackground(text);
+                var representation = getFactory().seq(icon, text);
+                inlayHintsSink.addInlineElement(perception.collectionDeclaration().getTextOffset(), true, representation, true);
+
+            }
             if (!perception.hasBeenPerceived()) {
                 return true;
             }
