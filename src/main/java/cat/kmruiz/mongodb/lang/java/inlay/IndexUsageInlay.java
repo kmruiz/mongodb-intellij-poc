@@ -9,6 +9,7 @@ import com.intellij.codeInsight.hints.*;
 import com.intellij.lang.Language;
 import com.intellij.openapi.editor.Editor;
 import com.intellij.openapi.util.IconLoader;
+import com.intellij.openapi.util.Key;
 import com.intellij.psi.PsiElement;
 import com.intellij.psi.PsiFile;
 import com.intellij.psi.PsiMethod;
@@ -87,19 +88,27 @@ public class IndexUsageInlay implements InlayHintsProvider<NoSettings> {
             MQLQueryPerception.MQLQueryOrNotPerceived perception = null;
 
             if ((psiElement instanceof PsiMethodCallExpression methodCall)) {
-                perception = queryPerception.parse(methodCall);
+                var resolvedMethod = methodCall.resolveMethod();
+
+                if (resolvedMethod == null) {
+                    return true;
+                }
+
+                var owningClass = resolvedMethod.getContainingClass();
+
+                if (owningClass == null) {
+                    return true;
+                }
+
+                if (owningClass.getQualifiedName().equals("com.mongodb.client.MongoCollection")) {
+                    perception = queryPerception.parse(methodCall);
+                } else {
+                    return true;
+                }
             } else {
                 return true;
             }
 
-            if (perception.collectionDeclaration() != null) {
-                var icon = getFactory().icon(MONGODB_ICON);
-                var text = getFactory().smallText(perception.database() + "." + perception.collection());
-                text = getFactory().roundWithBackground(text);
-                var representation = getFactory().seq(icon, text);
-                inlayHintsSink.addInlineElement(perception.collectionDeclaration().getTextOffset(), true, representation, true);
-
-            }
             if (!perception.hasBeenPerceived()) {
                 return true;
             }
@@ -110,12 +119,21 @@ public class IndexUsageInlay implements InlayHintsProvider<NoSettings> {
             if (!candidateIndexes.isEmpty()) {
                 var index = candidateIndexes.get(0);
 
-                var icon = getFactory().icon(MONGODB_ICON);
+                var icon = getFactory().smallScaledIcon(MONGODB_ICON);
                 var text = getFactory().smallText((index.shardKey() ? "[Sharding Key] " : "") + index.toJson());
                 text = getFactory().roundWithBackground(text);
 
                 var representation = getFactory().seq(icon, text);
                 inlayHintsSink.addInlineElement(psiElement.getTextOffset(), true, representation, true);
+            }
+
+            if (perception.collectionDeclaration() != null) {
+                var icon = getFactory().smallScaledIcon(MONGODB_ICON);
+                var text = getFactory().smallText(perception.database() + "." + perception.collection());
+                text = getFactory().roundWithBackground(text);
+                var representation = getFactory().seq(icon, text);
+
+                inlayHintsSink.addInlineElement(psiElement.getParent().getParent().getTextOffset(), false, representation, true);
             }
 
             return true;

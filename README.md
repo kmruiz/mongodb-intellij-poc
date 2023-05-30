@@ -20,11 +20,25 @@ dependency.
 
 ## Features
 
-* [x] Connects to a MongoDB cluster
-* [x] Detect current indexes in a MongoDB cluster
-* [x] Detects sharding status of a database
+* [x] Connects to a MongoDB cluster for intellisense.
+* [x] Detect current indexes in the connected MongoDB cluster.
+* [x] Detects sharding status of a database.
 * [x] Understands basic composition with `Filters` builder and `new Document`.
+* [x] Code analysis to detect which collections are used.
 
-## Screenshot
+### Code Smell Detection
 
-![Example Warning Message](doc/img/example-warning-message.png)
+* [x] Dynamic field names with high cardinality.
+* [x] Queries not using indexes.
+* [x] Queries that can cover multiple indexes.
+
+## Screenshots
+
+### Example Code With Hints
+![Example Hinting](doc/img/example-basic.png)
+
+### Example Warning For Multiple Colliding Indexes
+![Example Warning Message](doc/img/example-warning-multiple-indexes.png)
+
+### Example AutoComplete from Schema
+![Example Auto Complete](doc/img/example-autocomplete.png)

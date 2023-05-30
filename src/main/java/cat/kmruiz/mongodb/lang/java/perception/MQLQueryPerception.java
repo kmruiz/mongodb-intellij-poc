@@ -34,7 +34,7 @@ public class MQLQueryPerception {
 
         var declarationOfCollection = findReferenceToCollection(methodCall);
         if (declarationOfCollection == null) {
-            return MQLQueryOrNotPerceived.perceived("test", "test", new MQLQuery(methodCall, queryDescription), null);
+            return MQLQueryOrNotPerceived.notPerceived(PerceptionFailure.NO_NAMESPACE, null);
         }
 
         var mdbNamespace = inferNamespace(declarationOfCollection);
