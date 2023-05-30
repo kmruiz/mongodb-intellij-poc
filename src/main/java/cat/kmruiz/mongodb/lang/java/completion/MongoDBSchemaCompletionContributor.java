@@ -2,21 +2,16 @@ package cat.kmruiz.mongodb.lang.java.completion;
 
 import cat.kmruiz.mongodb.services.MongoDBFacade;
 import com.intellij.codeInsight.completion.*;
-import com.intellij.codeInsight.lookup.LookupElement;
 import com.intellij.codeInsight.lookup.LookupElementBuilder;
 import com.intellij.openapi.util.IconLoader;
 import com.intellij.openapi.util.text.Strings;
 import com.intellij.patterns.PlatformPatterns;
 import com.intellij.psi.PsiElement;
-import com.intellij.psi.PsiLiteralValue;
-import com.intellij.psi.PsiMethodCallExpression;
-import com.intellij.psi.tree.IElementType;
 import com.intellij.ui.JBColor;
 import com.intellij.util.ProcessingContext;
 import org.jetbrains.annotations.NotNull;
 
 import javax.swing.*;
-import java.awt.*;
 
 public class MongoDBSchemaCompletionContributor extends CompletionContributor {
     private static final Icon MONGODB_ICON = IconLoader.getIcon("/icons/mongodb-icon.png", MongoDBSchemaCompletionContributor.class);

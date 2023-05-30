@@ -1,6 +1,7 @@
 package cat.kmruiz.mongodb.lang.java;
 
 import cat.kmruiz.mongodb.lang.java.perception.MQLQueryPerception;
+import cat.kmruiz.mongodb.lang.java.quickfix.AddJavaDocForNamespace;
 import cat.kmruiz.mongodb.lang.java.quickfix.DeduceIndexQuickFix;
 import cat.kmruiz.mongodb.lang.java.quickfix.RunQueryOnSecondaryNode;
 import cat.kmruiz.mongodb.services.MongoDBFacade;
@@ -32,25 +33,22 @@ public class QueryIndexingQualityInspection extends AbstractBaseJavaLocalInspect
 
                 if (owningClass.getQualifiedName().equals("com.mongodb.client.MongoCollection")) {
                     var perception = queryPerception.parse(expression);
-                    if (!perception.hasBeenPerceived()) {
-                        return;
-                    }
 
                     handlePerception(expression, perception);
                 }
             }
 
-            @Override
-            public void visitMethod(PsiMethod method) {
-                var perception = queryPerception.parse(method);
+            private void handlePerception(PsiElement member, MQLQueryPerception.MQLQueryOrNotPerceived perception) {
                 if (!perception.hasBeenPerceived()) {
+                    if (perception.failure() == MQLQueryPerception.PerceptionFailure.NO_NAMESPACE) {
+                        holder.registerProblem(perception.collectionDeclaration(),
+                                InspectionBundle.message("inspection.QueryIndexingQualityInspection.couldNotDetectNamespace"),
+                                        new AddJavaDocForNamespace(perception.collectionDeclaration()));
+                    }
+
                     return;
                 }
 
-                handlePerception(method, perception);
-            }
-
-            private void handlePerception(PsiElement member, MQLQueryPerception.MQLQueryOrNotPerceived perception) {
                 var indexes = facade.indexesOfCollection(perception.database(), perception.collection());
                 if (!indexes.connected()) {
                     return;

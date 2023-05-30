@@ -1,12 +1,14 @@
 package cat.kmruiz.mongodb.lang.java.inlay;
 
 import cat.kmruiz.mongodb.lang.java.QueryIndexingQualityInspection;
+import cat.kmruiz.mongodb.lang.java.completion.MongoDBSchemaCompletionContributor;
 import cat.kmruiz.mongodb.lang.java.perception.MQLQueryPerception;
 import cat.kmruiz.mongodb.services.MongoDBFacade;
 import cat.kmruiz.mongodb.services.mql.MQLIndex;
 import com.intellij.codeInsight.hints.*;
 import com.intellij.lang.Language;
 import com.intellij.openapi.editor.Editor;
+import com.intellij.openapi.util.IconLoader;
 import com.intellij.psi.PsiElement;
 import com.intellij.psi.PsiFile;
 import com.intellij.psi.PsiMethod;
@@ -17,9 +19,12 @@ import org.jetbrains.annotations.Nullable;
 
 import javax.swing.*;
 import java.util.Collections;
+import java.util.List;
 import java.util.Objects;
 
 public class IndexUsageInlay implements InlayHintsProvider<NoSettings> {
+    private static final Icon MONGODB_ICON = IconLoader.getIcon("/icons/mongodb-icon-small.png", MongoDBSchemaCompletionContributor.class);
+
     @Override
     public boolean isVisibleInSettings() {
         return false;
@@ -81,9 +86,7 @@ public class IndexUsageInlay implements InlayHintsProvider<NoSettings> {
         public boolean collect(@NotNull PsiElement psiElement, @NotNull Editor editor, @NotNull InlayHintsSink inlayHintsSink) {
             MQLQueryPerception.MQLQueryOrNotPerceived perception = null;
 
-            if ((psiElement instanceof PsiMethod method)) {
-                perception = queryPerception.parse(method);
-            } else if ((psiElement instanceof PsiMethodCallExpression methodCall)) {
+            if ((psiElement instanceof PsiMethodCallExpression methodCall)) {
                 perception = queryPerception.parse(methodCall);
             } else {
                 return true;
@@ -99,9 +102,11 @@ public class IndexUsageInlay implements InlayHintsProvider<NoSettings> {
             if (!candidateIndexes.isEmpty()) {
                 var index = candidateIndexes.get(0);
 
-                var representation = getFactory().smallText((index.shardKey() ? "[Sharding Key] " : "") + index.toJson());
-                representation = getFactory().roundWithBackground(representation);
+                var icon = getFactory().icon(MONGODB_ICON);
+                var text = getFactory().smallText((index.shardKey() ? "[Sharding Key] " : "") + index.toJson());
+                text = getFactory().roundWithBackground(text);
 
+                var representation = getFactory().seq(icon, text);
                 inlayHintsSink.addInlineElement(psiElement.getTextOffset(), true, representation, true);
             }
 
