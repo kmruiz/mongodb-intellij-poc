@@ -7,10 +7,7 @@ import com.intellij.codeInsight.lookup.LookupElementBuilder;
 import com.intellij.openapi.util.IconLoader;
 import com.intellij.openapi.util.text.Strings;
 import com.intellij.patterns.PlatformPatterns;
-import com.intellij.patterns.PsiJavaPatterns;
-import com.intellij.patterns.StandardPatterns;
 import com.intellij.psi.PsiElement;
-import com.intellij.psi.PsiLiteralValue;
 import com.intellij.psi.PsiMethodCallExpression;
 import com.intellij.ui.JBColor;
 import com.intellij.util.ProcessingContext;
@@ -20,7 +17,6 @@ import javax.swing.*;
 
 public class MongoDBSchemaCompletionContributor extends CompletionContributor {
     private static final Icon MONGODB_ICON = IconLoader.getIcon("/icons/mongodb-icon.png", MongoDBSchemaCompletionContributor.class);
-    private static final MQLQueryPerception queryPerception = new MQLQueryPerception();
 
     public MongoDBSchemaCompletionContributor() {
         extend(CompletionType.BASIC,
@@ -30,6 +26,8 @@ public class MongoDBSchemaCompletionContributor extends CompletionContributor {
                     protected void addCompletions(@NotNull CompletionParameters parameters, @NotNull ProcessingContext context, @NotNull CompletionResultSet result) {
                         var currentProject = parameters.getEditor().getProject();
                         var mongodbFacade = currentProject.getService(MongoDBFacade.class);
+                        var queryPerception = new MQLQueryPerception(mongodbFacade);
+
                         var psiElement = parameters.getPosition().getParent();
                         MQLQueryPerception.MQLQueryOrNotPerceived perception = null;
 

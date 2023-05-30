@@ -7,15 +7,18 @@ import java.util.*;
 
 public record CollectionSchema(String database, String collection, Map<String, FieldValue> root) {
     public record FieldValue(boolean isIndexed, Set<Type> types, Set<String> samples) {
-        enum Type {
-            OBJECT_ID("ObjectId"),
-            STRING("String"),
-            INTEGER("Integer"),
-            LONG("Long"),
-            DOUBLE("Double"),
-            DOCUMENT("Document"),
-            DATETIME("Date"),
-            ARRAY("Array");
+        public enum Type {
+            OBJECT_ID("objectId"),
+            STRING("string"),
+            BOOLEAN("bool"),
+            INTEGER("int"),
+            LONG("long"),
+            DECIMAL("decimal"),
+            DOUBLE("double"),
+            OBJECT("object"),
+            DATETIME("date"),
+            ARRAY("array"),
+            ANY("any");
 
             private final String visibleName;
 
@@ -52,9 +55,21 @@ public record CollectionSchema(String database, String collection, Map<String, F
                     return DATETIME;
                 }
 
-                return DOCUMENT;
+                if (object instanceof Boolean) {
+                    return BOOLEAN;
+                }
+
+                return OBJECT;
             }
         }
+
+        public boolean supportsProvidedType(Type type) {
+            return this.types.contains(type);
+        }
+    }
+
+    public FieldValue ofField(String fieldName) {
+        return root.getOrDefault(fieldName, new FieldValue(false, Set.of(FieldValue.Type.ANY), Collections.emptySet()));
     }
 
     public CollectionSchema merge(Set<String> indexedFields, Document document) {

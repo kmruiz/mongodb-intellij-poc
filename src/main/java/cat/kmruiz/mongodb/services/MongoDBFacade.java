@@ -6,7 +6,6 @@ import cat.kmruiz.mongodb.services.schema.CollectionSchema;
 import com.intellij.openapi.components.Service;
 import com.intellij.openapi.project.Project;
 import com.mongodb.ConnectionString;
-import com.mongodb.ReadPreference;
 import com.mongodb.client.MongoClient;
 import com.mongodb.client.MongoClients;
 import com.mongodb.client.model.Aggregates;
@@ -34,7 +33,7 @@ public final class MongoDBFacade {
         this.currentProject = project;
     }
 
-    public ConnectionAwareResult<List<MQLIndex>> candidateIndexesForQuery(String database, String collection, MQLQuery query) {
+    public <Node> ConnectionAwareResult<List<MQLIndex>> candidateIndexesForQuery(String database, String collection, MQLQuery<Node> query) {
         if (assertOfflineMode()) {
             return ConnectionAwareResult.disconnected();
         }
@@ -45,8 +44,8 @@ public final class MongoDBFacade {
         for (var index : allIndexes) {
             index:
             for (var indexField : index.definition()) {
-                for (MQLQuery.MQLQueryField field : query.fields()) {
-                    if (field.wildcard()) {
+                for (MQLQuery.Predicate<Node> field : query.predicates()) {
+                    if (field.wildcardField()) {
                         continue;
                     }
 

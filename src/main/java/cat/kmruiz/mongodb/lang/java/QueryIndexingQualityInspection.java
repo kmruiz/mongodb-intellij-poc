@@ -14,11 +14,10 @@ import com.intellij.psi.*;
 import org.jetbrains.annotations.NotNull;
 
 public class QueryIndexingQualityInspection extends AbstractBaseJavaLocalInspectionTool {
-    private final MQLQueryPerception queryPerception = new MQLQueryPerception();
-
     @Override
     public @NotNull PsiElementVisitor buildVisitor(@NotNull ProblemsHolder holder, boolean isOnTheFly) {
         var facade = holder.getProject().getService(MongoDBFacade.class);
+        var queryPerception = new MQLQueryPerception(facade);
 
         return new JavaElementVisitor() {
             @Override
@@ -57,6 +56,12 @@ public class QueryIndexingQualityInspection extends AbstractBaseJavaLocalInspect
                 var query = perception.query();
                 var candidateIndexes = facade.candidateIndexesForQuery(perception.database(), perception.collection(), query).result();
                 var isCollectionSharded = facade.isCollectionSharded(perception.database(), perception.collection()).result();
+
+                for (var predicate : query.predicates()) {
+                    for (var warning : predicate.warnings()) {
+                        holder.registerProblem(warning.on(), warning.message());
+                    }
+                }
 
                 if (query.hasWildcardField() && query.hasHighCardinality()) {
                     holder.registerProblem(member,

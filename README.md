@@ -31,6 +31,7 @@ dependency.
 * [x] Dynamic field names with high cardinality.
 * [x] Queries not using indexes.
 * [x] Queries that can cover multiple indexes.
+* [x] Type checking against the inferred schema of the collection.
 
 ## Screenshots
 
@@ -42,3 +43,6 @@ dependency.
 
 ### Example AutoComplete from Schema
 ![Example Auto Complete](doc/img/example-autocomplete.png)
+
+### Example Type Checking from Schema
+![Example Type Checking](doc/img/example-warning-inferred-type.png)

@@ -1,10 +1,13 @@
 package cat.kmruiz.mongodb.lang.java.perception;
 
+import cat.kmruiz.mongodb.services.MongoDBFacade;
 import cat.kmruiz.mongodb.services.mql.MQLQuery;
 import cat.kmruiz.mongodb.services.mql.MongoDBNamespace;
+import cat.kmruiz.mongodb.services.mql.reporting.QueryWarning;
+import cat.kmruiz.mongodb.services.schema.CollectionSchema;
+import cat.kmruiz.mongodb.ui.InspectionBundle;
+import com.intellij.openapi.util.text.Strings;
 import com.intellij.psi.*;
-import com.intellij.psi.javadoc.PsiDocComment;
-import com.intellij.psi.javadoc.PsiDocTag;
 import org.jetbrains.annotations.NotNull;
 
 import java.util.*;
@@ -15,7 +18,13 @@ public class MQLQueryPerception {
         NO_NAMESPACE
     }
 
-    public record MQLQueryOrNotPerceived(String database, String collection, MQLQuery query, PerceptionFailure failure, PsiJavaDocumentedElement collectionDeclaration) {
+    private final MongoDBFacade mongoDBFacade;
+
+    public MQLQueryPerception(MongoDBFacade mongoDBFacade) {
+        this.mongoDBFacade = mongoDBFacade;
+    }
+
+    public record MQLQueryOrNotPerceived(String database, String collection, MQLQuery<PsiElement> query, PerceptionFailure failure, PsiJavaDocumentedElement collectionDeclaration) {
         public boolean hasBeenPerceived() {
             return query != null;
         }
@@ -23,14 +32,14 @@ public class MQLQueryPerception {
         public static MQLQueryOrNotPerceived notPerceived(PerceptionFailure failure, PsiJavaDocumentedElement collectionDeclaration) {
             return new MQLQueryOrNotPerceived(null, null,null, failure, collectionDeclaration);
         }
-        public static MQLQueryOrNotPerceived perceived(String database, String collection, MQLQuery query, PsiJavaDocumentedElement collectionDeclaration) {
-            return new MQLQueryOrNotPerceived(database, collection,query, null, collectionDeclaration);
+        public static MQLQueryOrNotPerceived perceived(String database, String collection, MQLQuery<PsiElement> query, PsiJavaDocumentedElement collectionDeclaration) {
+            return new MQLQueryOrNotPerceived(database, collection, query, null, collectionDeclaration);
         }
     }
 
     public MQLQueryOrNotPerceived parse(@NotNull PsiMethodCallExpression methodCall) {
         var methodRefCall = methodCall.getMethodExpression().getCanonicalText();
-        var queryDescription = new LinkedHashSet<MQLQuery.MQLQueryField>();
+        var queryDescription = new LinkedHashSet<MQLQuery.Predicate<PsiElement>>();
 
         var declarationOfCollection = findReferenceToCollection(methodCall);
         if (declarationOfCollection == null) {
@@ -38,6 +47,7 @@ public class MQLQueryPerception {
         }
 
         var mdbNamespace = inferNamespace(declarationOfCollection);
+        var schemaOfCollection = mongoDBFacade.schemaOf(mdbNamespace.database(), mdbNamespace.collection());
 
         if (
                 methodRefCall.endsWith("find") ||
@@ -51,20 +61,20 @@ public class MQLQueryPerception {
             }
 
             if (argsTypes[0].equalsToText("org.bson.Document") || argsTypes[0].equalsToText("org.bson.conversions.Bson")) {
-                resolveBsonDocumentChain(args.getExpressions()[0], queryDescription);
+                resolveBsonDocumentChain(args.getExpressions()[0], queryDescription, schemaOfCollection);
             } else if (argsTypes.length > 1) { // session is the first parameter, so the query is the second
-                resolveBsonDocumentChain(args.getExpressions()[1], queryDescription);
+                resolveBsonDocumentChain(args.getExpressions()[1], queryDescription, schemaOfCollection);
             }
         }
 
         if (mdbNamespace.isKnown()) {
-            return MQLQueryOrNotPerceived.perceived(mdbNamespace.database(), mdbNamespace.collection(), new MQLQuery(methodCall, queryDescription), (PsiJavaDocumentedElement) declarationOfCollection);
+            return MQLQueryOrNotPerceived.perceived(mdbNamespace.database(), mdbNamespace.collection(), new MQLQuery<>(methodCall, queryDescription), (PsiJavaDocumentedElement) declarationOfCollection);
         } else {
             return MQLQueryOrNotPerceived.notPerceived(PerceptionFailure.NO_NAMESPACE, (PsiJavaDocumentedElement) declarationOfCollection);
         }
     }
 
-    private void resolveBsonDocumentChain(PsiExpression expr, LinkedHashSet<MQLQuery.MQLQueryField> queryDescription) {
+    private void resolveBsonDocumentChain(PsiExpression expr, LinkedHashSet<MQLQuery.Predicate<PsiElement>> queryDescription, MongoDBFacade.ConnectionAwareResult<CollectionSchema> schemaOfCollection) {
         if (expr instanceof PsiNewExpression newDoc) {
             var constructorMethod = newDoc.resolveConstructor();
             var returnType = constructorMethod.getContainingClass();
@@ -73,7 +83,7 @@ public class MQLQueryPerception {
                 // we are in "new Document(key, value)"
                 var methodArgs = newDoc.getArgumentList().getExpressions();
                 if (methodArgs.length == 2) {
-                    queryDescription.add(resolveMQLQueryField(methodArgs[0]));
+                    queryDescription.add(resolveMQLQueryField(methodArgs[0], methodArgs[1], schemaOfCollection));
                 }
             }
         } else if (expr instanceof PsiMethodCallExpression methodCall) {
@@ -115,14 +125,14 @@ public class MQLQueryPerception {
                     case "geoIntersects":
                     case "near":
                     case "nearSphere":
-                        queryDescription.add(resolveMQLQueryField(methodArgs[0]));
+                        queryDescription.add(resolveMQLQueryField(methodArgs[0], methodArgs[1], schemaOfCollection));
                         break;
                     case "and":
                     case "or":
                     case "nor":
                         if (method.isVarArgs()) {
                             for (var arg : methodArgs) {
-                                resolveBsonDocumentChain(arg, queryDescription);
+                                resolveBsonDocumentChain(arg, queryDescription, schemaOfCollection);
                             }
                         }
                         break;
@@ -131,28 +141,47 @@ public class MQLQueryPerception {
             }
 
             if (leftExpr.getType().equalsToText("org.bson.Document") || leftExpr.getType().equalsToText("org.bson.conversions.Bson")) {
-                resolveBsonDocumentChain(leftExpr.getQualifierExpression(), queryDescription);
+                resolveBsonDocumentChain(leftExpr.getQualifierExpression(), queryDescription, schemaOfCollection);
             } else if (leftExpr.getType().equalsToText("org.bson.Document") || leftExpr.getType().equalsToText("org.bson.conversions.Bson")) {
-                resolveBsonDocumentChain(leftExpr.getQualifierExpression(), queryDescription);
+                resolveBsonDocumentChain(leftExpr.getQualifierExpression(), queryDescription, schemaOfCollection);
             }
 
             if (leftExpr.getCanonicalText().endsWith(".append")) {
                 if (methodArgs.length == 2) {
-                    queryDescription.add(resolveMQLQueryField(methodArgs[0]));
+                    queryDescription.add(resolveMQLQueryField(methodArgs[0], methodArgs[1], schemaOfCollection));
                 }
             }
         }
     }
 
-    private MQLQuery.MQLQueryField resolveMQLQueryField(PsiExpression expression) {
-        if (expression instanceof PsiLiteralExpression) {
-            return MQLQuery.MQLQueryField.named(expression.getText().replaceAll("\"", ""));
+    private MQLQuery.Predicate<PsiElement> resolveMQLQueryField(PsiExpression field, PsiExpression value, MongoDBFacade.ConnectionAwareResult<CollectionSchema> currentSchema) {
+        var providedTypeOnQuery = inferTypeOf(value);
+        var warnings = new ArrayList<QueryWarning<PsiElement>>();
+
+        if (field instanceof PsiLiteralExpression literalExpr) {
+            var fieldName = literalExpr.getValue().toString();
+            if (currentSchema.connected()) {
+                var fieldValue = currentSchema.result().ofField(fieldName);
+                if (!fieldValue.supportsProvidedType(providedTypeOnQuery)) {
+                    warnings.add(
+                            new QueryWarning<>(
+                                    value,
+                                    InspectionBundle.message("inspection.MQLQueryPerception.warning.fieldTypeDoesNotMatch",
+                                            fieldName,
+                                            Strings.join(fieldValue.types(), ", "),
+                                            providedTypeOnQuery)
+                            )
+                    );
+                }
+            }
+
+            return MQLQuery.Predicate.named(fieldName, providedTypeOnQuery, warnings);
         } else {
-            var resolvedValue = inferConstantStringValue(expression);
-            if (resolvedValue == null) {
-                return MQLQuery.MQLQueryField.newWildcard();
+            var resolvedField = inferConstantStringValue(field);
+            if (resolvedField == null) {
+                return MQLQuery.Predicate.newWildcard(warnings);
             } else {
-                return MQLQuery.MQLQueryField.named(resolvedValue);
+                return MQLQuery.Predicate.named(resolvedField, providedTypeOnQuery, warnings);
             }
         }
     }
@@ -279,6 +308,18 @@ public class MQLQueryPerception {
         }
 
         return null;
+    }
+
+    public static CollectionSchema.FieldValue.Type inferTypeOf(PsiExpression expression) {
+        return switch (expression.getType().getCanonicalText()) {
+            case "java.lang.String" -> CollectionSchema.FieldValue.Type.STRING;
+            case "boolean", "java.lang.Boolean" -> CollectionSchema.FieldValue.Type.BOOLEAN;
+            case "short", "java.lang.Short", "int", "java.lang.Integer" -> CollectionSchema.FieldValue.Type.INTEGER;
+            case "long", "java.lang.Long", "java.math.BigInteger" -> CollectionSchema.FieldValue.Type.LONG;
+            case "float", "java.lang.Float", "double", "java.lang.Double" -> CollectionSchema.FieldValue.Type.DOUBLE;
+            case "java.math.BigDecimal" -> CollectionSchema.FieldValue.Type.DECIMAL;
+            default -> CollectionSchema.FieldValue.Type.ANY;
+        };
     }
 
 }
