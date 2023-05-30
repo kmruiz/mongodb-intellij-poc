@@ -102,7 +102,6 @@ public class MongoDBSchemaCompletionContributor extends CompletionContributor {
         var parent = psiElement;
         do {
             var prevParent = parent.getParent();
-            System.out.println(prevParent);
             if (prevParent instanceof PsiMethodCallExpression && prevParent.getText().contains(".find")) {
                 return (PsiMethodCallExpression) prevParent;
             }
