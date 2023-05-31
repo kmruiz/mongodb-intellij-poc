@@ -16,8 +16,6 @@ dependency.
 
 2. Create a new MongoDB connection in the databases view.
 
-:warning: Now it assumes that all queries run in the namespace `test.test` :warning:
-
 ## Features
 
 * [x] Connects to a MongoDB cluster for intellisense.
