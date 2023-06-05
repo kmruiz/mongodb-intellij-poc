@@ -47,7 +47,7 @@ public final class JavaMQLParser {
         var queryDsl = maybeQueryDsl.get();
         resolveBsonDocumentChain(queryDsl, predicates);
 
-        return new QueryNode<>(mdbNamespace, operation, methodCall, predicates);
+        return new QueryNode<>(mdbNamespace, operation, methodCall, predicates, QueryNode.ReadPreference.PRIMARY, 0);
     }
 
     private void resolveBsonDocumentChain(PsiExpression expr, List<Node<PsiElement>> predicates) {

@@ -9,7 +9,7 @@ import java.util.*;
 public record CollectionSchema(String database, String collection, Map<String, FieldValue> root) {
     public record FieldValue(boolean isIndexed, Set<BsonType> types, Set<String> samples) {
         public boolean supportsProvidedType(BsonType type) {
-            return this.types.contains(type);
+            return this.types.contains(type) || type == BsonType.ANY || this.types.contains(BsonType.ANY);
         }
     }
 

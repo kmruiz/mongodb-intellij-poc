@@ -70,6 +70,10 @@ public final class MongoDBFacade {
         return ConnectionAwareResult.resulting(candidateIndexes);
     }
 
+    public ConnectionAwareResult<List<MQLIndex>> indexesOfCollection(MongoDBNamespace namespace) {
+        return indexesOfCollection(namespace.database(), namespace.collection());
+    }
+
     public ConnectionAwareResult<List<MQLIndex>> indexesOfCollection(String database, String collection) {
         if (assertOfflineMode()) {
             return ConnectionAwareResult.disconnected();
@@ -89,6 +93,9 @@ public final class MongoDBFacade {
             return ConnectionAwareResult.resulting(result);
         }
 
+    }
+    public ConnectionAwareResult<Boolean> isCollectionSharded(MongoDBNamespace namespace) {
+        return isCollectionSharded(namespace.database(), namespace.collection());
     }
 
     public ConnectionAwareResult<Boolean> isCollectionSharded(String database, String collection) {

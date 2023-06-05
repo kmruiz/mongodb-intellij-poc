@@ -1,0 +1,92 @@
+package cat.kmruiz.mongodb.services.mql;
+
+import cat.kmruiz.mongodb.lang.java.quickfix.DeduceIndexQuickFix;
+import cat.kmruiz.mongodb.lang.java.quickfix.RunQueryOnSecondaryNode;
+import cat.kmruiz.mongodb.services.MongoDBFacade;
+import cat.kmruiz.mongodb.services.mql.ast.Node;
+import cat.kmruiz.mongodb.services.mql.ast.QueryNode;
+import cat.kmruiz.mongodb.services.mql.ast.binops.BinOpNode;
+import cat.kmruiz.mongodb.services.mql.ast.values.ValueNode;
+import cat.kmruiz.mongodb.services.schema.CollectionSchema;
+import cat.kmruiz.mongodb.ui.IndexBeautifier;
+import cat.kmruiz.mongodb.ui.InspectionBundle;
+import com.intellij.codeInspection.ProblemsHolder;
+import com.intellij.openapi.components.Service;
+import com.intellij.openapi.project.Project;
+import com.intellij.openapi.util.text.Strings;
+import com.intellij.psi.PsiElement;
+
+import java.util.HashSet;
+import java.util.List;
+import java.util.Set;
+
+@Service(Service.Level.PROJECT)
+public final class MQLIndexChecker {
+    private final MongoDBFacade mongoDBFacade;
+
+    public MQLIndexChecker(Project project) {
+        this.mongoDBFacade = project.getService(MongoDBFacade.class);
+    }
+
+    public void checkIndexes(QueryNode<PsiElement> query, ProblemsHolder holder) {
+        var indexResult = mongoDBFacade.indexesOfCollection(query.namespace());
+        var shardingResult = mongoDBFacade.isCollectionSharded(query.namespace());
+
+        if (!indexResult.connected() || !shardingResult.connected()) {
+            return;
+        }
+
+        var isShardedCollection = shardingResult.result();
+        var allUsedFields = collectAllFieldNames(query);
+        var usableIndexes = usableIndexesForFields(indexResult.result(), allUsedFields);
+
+        if (usableIndexes.size() == 0) {
+            holder.registerProblem(query.origin(),
+                    InspectionBundle.message("inspection.QueryIndexingQualityInspection.basicQueryNotCovered",
+                            query.namespace().database(),
+                            query.namespace().collection(),
+                            IndexBeautifier.beautify(indexResult.result()))
+                    );
+        } else if (usableIndexes.size() > 1) {
+            if (isShardedCollection) {
+                boolean canUseShardingKey = usableIndexes.stream().anyMatch(MQLIndex::shardKey);
+                if (!canUseShardingKey) {
+                    var shardingKey = indexResult.result().stream().filter(MQLIndex::shardKey).findFirst().get();
+
+                    holder.registerProblem(query.origin(),
+                            InspectionBundle.message("inspection.QueryIndexingQualityInspection.indexIsNotShardKey",
+                                    query.namespace().database(),
+                                    query.namespace().collection(),
+                                    IndexBeautifier.beautify(usableIndexes.get(0)),
+                                    IndexBeautifier.beautify(shardingKey))
+                            );
+                }
+            } else {
+                holder.registerProblem(query.origin(),
+                        InspectionBundle.message("inspection.QueryIndexingQualityInspection.queryCoveredByMultipleIndexes",
+                                query.namespace().database(),
+                                query.namespace().collection(),
+                                IndexBeautifier.beautify(usableIndexes)));
+            }
+        }
+    }
+
+    private Set<String> collectAllFieldNames(Node<PsiElement> node) {
+        var fieldNames = new HashSet<String>();
+        if (node instanceof BinOpNode<PsiElement> binOp) {
+            fieldNames.add(binOp.field());
+        } else {
+            for (var child : node.children()) {
+                fieldNames.addAll(collectAllFieldNames(child));
+            }
+        }
+
+        return fieldNames;
+    }
+
+    private List<MQLIndex> usableIndexesForFields(List<MQLIndex> allIndexes, Set<String> fields) {
+        return allIndexes.stream().filter(index ->
+                index.definition().stream().anyMatch(field -> fields.contains(field.fieldName()))
+        ).toList();
+    }
+}

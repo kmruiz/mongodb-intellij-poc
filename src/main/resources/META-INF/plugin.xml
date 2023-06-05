@@ -45,6 +45,16 @@
                          level="WARNING"
                          implementationClass="cat.kmruiz.mongodb.lang.java.TypeCheckingInspection"/>
 
+        <localInspection language="JAVA"
+                         bundle="messages.InspectionBundle"
+                         key="inspection.TypeCheckingInspection"
+                         groupPath="Java"
+                         groupBundle="messages.configuration"
+                         groupKey="inspection.probable.mongodb.performance.issues"
+                         enabledByDefault="true"
+                         level="WARNING"
+                         implementationClass="cat.kmruiz.mongodb.lang.java.IndexCheckingInspection"/>
+
 <!--        <localInspection language="JAVA"-->
 <!--                         bundle="messages.InspectionBundle"-->
 <!--                         key="inspection.QueryIndexingQualityInspection"-->
