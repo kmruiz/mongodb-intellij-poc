@@ -67,7 +67,7 @@ public class JavaMQLParserTest extends LightJavaCodeInsightFixtureTestCase5 {
 
     @Test
     void should_understand_find_one_queries_with_limit() {
-        var result = parseValid(withJavaQuery("collection.find(Filters.eq(\"a\", 1)).limit(1   )"));
+        var result = parseValid(withJavaQuery("collection.find(Filters.eq(\"a\", 1)).limit(1)"));
 
         assertEquals(DATABASE, result.namespace().database());
         assertEquals(COLLECTION, result.namespace().collection());
