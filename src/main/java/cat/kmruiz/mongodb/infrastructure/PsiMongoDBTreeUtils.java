@@ -4,6 +4,8 @@ import com.intellij.psi.PsiElement;
 import com.intellij.psi.PsiMethodCallExpression;
 import com.intellij.psi.util.PsiTreeUtil;
 
+import java.util.Objects;
+
 public final class PsiMongoDBTreeUtils {
     private PsiMongoDBTreeUtils() {}
 
@@ -24,7 +26,7 @@ public final class PsiMongoDBTreeUtils {
             return null;
         }
 
-        return currentMethodExpression;
+        return Objects.requireNonNullElse(getMongoDBQueryExpression(currentMethodExpression.getParent()), currentMethodExpression);
     }
 
     public static PsiMethodCallExpression asMongoDBExpression(PsiElement parent) {

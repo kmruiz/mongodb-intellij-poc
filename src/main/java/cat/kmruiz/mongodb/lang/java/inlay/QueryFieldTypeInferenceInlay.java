@@ -9,6 +9,7 @@ import cat.kmruiz.mongodb.services.mql.ast.binops.BinOpNode;
 import com.intellij.codeInsight.hints.*;
 import com.intellij.lang.Language;
 import com.intellij.openapi.editor.Editor;
+import com.intellij.openapi.util.Key;
 import com.intellij.openapi.util.text.Strings;
 import com.intellij.psi.PsiElement;
 import com.intellij.psi.PsiFile;
@@ -17,6 +18,8 @@ import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 import javax.swing.*;
+import java.util.HashMap;
+import java.util.Map;
 import java.util.function.Consumer;
 
 public class QueryFieldTypeInferenceInlay implements InlayHintsProvider<NoSettings> {
@@ -70,17 +73,20 @@ public class QueryFieldTypeInferenceInlay implements InlayHintsProvider<NoSettin
     public static class FieldTypeInlayCollector extends FactoryInlayHintsCollector {
         private final JavaMQLParser parser;
         private final MongoDBFacade facade;
+        private final Map<Integer, String> addedInlays;
 
         public FieldTypeInlayCollector(@NotNull Editor editor) {
             super(editor);
 
             this.facade = editor.getProject().getService(MongoDBFacade.class);
             this.parser = editor.getProject().getService(JavaMQLParser.class);
+            this.addedInlays = new HashMap<>();
         }
 
         @Override
         public boolean collect(@NotNull PsiElement psiElement, @NotNull Editor editor, @NotNull InlayHintsSink inlayHintsSink) {
             var currentMethodExpression = PsiMongoDBTreeUtils.asMongoDBExpression(psiElement);
+
             if (currentMethodExpression == null) {
                 return true;
             }
@@ -96,12 +102,16 @@ public class QueryFieldTypeInferenceInlay implements InlayHintsProvider<NoSettin
 
                 iterateOverAllFieldReferences(query, binOp -> {
                     var typeOfField = schema.ofField(binOp.field());
+                    var fieldTypesHash = Strings.join(typeOfField.types(), "|");
                     var fieldTypes = getFactory().text(": " + Strings.join(typeOfField.types(), " | "));
 
-                    inlayHintsSink.addInlineElement(binOp.fieldOrigin().getTextOffset() + binOp.fieldOrigin().getTextLength(), true, fieldTypes, false);
+                    if (!this.addedInlays.getOrDefault(binOp.fieldOrigin().getTextOffset(), "").equals(fieldTypesHash)) {
+                        inlayHintsSink.addInlineElement(binOp.fieldOrigin().getTextOffset() + binOp.fieldOrigin().getTextLength(), true, fieldTypes, false);
+                        this.addedInlays.put(binOp.fieldOrigin().getTextOffset(), fieldTypesHash);
+                    }
                 });
 
-                return false;
+                return true;
             }
 
             return true;
