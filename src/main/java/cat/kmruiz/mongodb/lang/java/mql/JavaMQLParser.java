@@ -3,8 +3,8 @@ package cat.kmruiz.mongodb.lang.java.mql;
 import cat.kmruiz.mongodb.services.mql.MongoDBNamespace;
 import cat.kmruiz.mongodb.services.mql.ast.InvalidMQLNode;
 import cat.kmruiz.mongodb.services.mql.ast.Node;
-import cat.kmruiz.mongodb.services.mql.ast.PredicateNode;
 import cat.kmruiz.mongodb.services.mql.ast.QueryNode;
+import cat.kmruiz.mongodb.services.mql.ast.binops.BinOpNode;
 import cat.kmruiz.mongodb.services.mql.ast.values.ConstantValueNode;
 import cat.kmruiz.mongodb.services.mql.ast.values.ReferenceValueNode;
 import cat.kmruiz.mongodb.services.mql.ast.values.ValueNode;
@@ -45,18 +45,7 @@ public final class JavaMQLParser {
     }
 
     private void resolveBsonDocumentChain(PsiExpression expr, List<Node<PsiElement>> predicates) {
-        if (expr instanceof PsiNewExpression newDoc) {
-            var constructorMethod = newDoc.resolveConstructor();
-            var returnType = constructorMethod.getContainingClass();
-
-            if (returnType.getQualifiedName().equals("org.bson.Document")) {
-                // we are in "new Document(key, value)"
-                var methodArgs = newDoc.getArgumentList().getExpressions();
-                if (methodArgs.length == 2) {
-                    predicates.add(resolveMQLPredicate(methodArgs[0], methodArgs[1]));
-                }
-            }
-        } else if (expr instanceof PsiMethodCallExpression methodCall) {
+        if (expr instanceof PsiMethodCallExpression methodCall) {
             var methodName = "";
             var methodArgs = methodCall.getArgumentList().getExpressions();
             var leftExpr = methodCall.getMethodExpression();
@@ -74,20 +63,20 @@ public final class JavaMQLParser {
             }
 
             switch (methodName) {
-                case "eq", "ne", "gt", "lt", "gte", "lte", "in", "nin", "exists", "type", "mod", "regex", "all", "elemMatch", "size", "bitsAllClear", "bitsAllSet", "bitsAnyClear", "bitsAnySet", "geoWithin", "geoWithinBox", "geoWithinPolygon", "geoWithinCenter", "geoWithinCenterSphere", "geoIntersects", "near", "nearSphere" ->
-                        predicates.add(resolveMQLPredicate(methodArgs[0], methodArgs[1]));
+                case "eq", "ne", "gt", "lt", "gte", "lte", "in", "nin", "exists", "type", "mod", "regex", "all", "elemMatch", "size", "bitsAllClear", "bitsAllSet", "bitsAnyClear", "bitsAnySet", "geoWithin", "geoWithinBox", "geoWithinPolygon", "geoWithinCenter", "geoWithinCenterSphere", "geoIntersects", "near", "nearSphere" -> {
+                    var mqlPred = resolveMQLPredicate(methodCall, methodName, methodArgs[0], methodArgs[1]);
+                    predicates.add(mqlPred);
+                }
                 case "and", "or", "nor" -> {
                     var allPreds = new ArrayList<Node<PsiElement>>();
                     for (var arg : methodArgs) {
                         resolveBsonDocumentChain(arg, allPreds);
                     }
 
-                    if (methodName.equals("and")) {
-                        predicates.add(new AndNode<>(methodCall, allPreds));
-                    } else if (methodName.equals("or")) {
-                        predicates.add(new OrNode<>(methodCall, allPreds));
-                    } else if (methodName.equals("nor")) {
-                        predicates.add(new NorNode<>(methodCall, allPreds));
+                    switch (methodName) {
+                        case "and" -> predicates.add(new AndNode<>(methodCall, allPreds));
+                        case "or" -> predicates.add(new OrNode<>(methodCall, allPreds));
+                        case "nor" -> predicates.add(new NorNode<>(methodCall, allPreds));
                     }
                 }
                 default -> {
@@ -105,13 +94,13 @@ public final class JavaMQLParser {
 
             if (leftExpr.getCanonicalText().endsWith(".append")) {
                 if (methodArgs.length == 2) {
-                    predicates.add(resolveMQLPredicate(methodArgs[0], methodArgs[1]));
+                    predicates.add(resolveMQLPredicate(methodCall, "eq", methodArgs[0], methodArgs[1]));
                 }
             }
         }
     }
 
-    private PredicateNode<PsiElement, Object> resolveMQLPredicate(PsiExpression field, PsiExpression value) {
+    private BinOpNode<PsiElement> resolveMQLPredicate(PsiElement origin, String operation, PsiExpression field, PsiExpression value) {
         var resolvedConstant = inferConstantValue(value);
         ValueNode<PsiElement, Object> valueNode = null;
 
@@ -123,13 +112,13 @@ public final class JavaMQLParser {
 
         if (field instanceof PsiLiteralExpression literalExpr) {
             var fieldName = literalExpr.getValue().toString();
-            return new PredicateNode<>(field.getParent(), fieldName, valueNode);
+            return new BinOpNode<>(origin, operation, fieldName, Collections.singletonList(valueNode));
         } else {
             var resolvedField = inferConstantValue(field);
             if (resolvedField == null) {
-                return new PredicateNode<>(field.getParent(), null, valueNode);
+                return new BinOpNode<>(origin, operation, null, Collections.singletonList(valueNode));
             } else {
-                return new PredicateNode<>(field.getParent(), resolvedField.toString(), valueNode);
+                return new BinOpNode<>(origin, operation, resolvedField.toString(), Collections.singletonList(valueNode));
             }
         }
     }

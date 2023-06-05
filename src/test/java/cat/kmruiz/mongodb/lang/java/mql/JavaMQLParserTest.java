@@ -1,9 +1,9 @@
 package cat.kmruiz.mongodb.lang.java.mql;
 
 import cat.kmruiz.mongodb.services.mql.ast.InvalidMQLNode;
-import cat.kmruiz.mongodb.services.mql.ast.PredicateNode;
 import cat.kmruiz.mongodb.services.mql.ast.QueryNode;
-import cat.kmruiz.mongodb.services.mql.ast.values.ReferenceValueNode;
+import cat.kmruiz.mongodb.services.mql.ast.binops.BinOpNode;
+import cat.kmruiz.mongodb.services.mql.ast.values.ValueNode;
 import cat.kmruiz.mongodb.services.mql.ast.varops.AndNode;
 import cat.kmruiz.mongodb.services.mql.ast.varops.NorNode;
 import cat.kmruiz.mongodb.services.mql.ast.varops.OrNode;
@@ -11,9 +11,8 @@ import com.intellij.psi.PsiElement;
 import com.intellij.psi.PsiMethodCallExpression;
 import com.intellij.psi.util.PsiTreeUtil;
 import com.intellij.testFramework.RunsInEdt;
-import com.intellij.testFramework.fixtures.IdeaTestFixtureFactory;
 import com.intellij.testFramework.fixtures.LightJavaCodeInsightFixtureTestCase5;
-import com.intellij.testFramework.fixtures.impl.ModuleFixtureBuilderImpl;
+import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import org.junit.jupiter.api.Test;
 
@@ -41,9 +40,9 @@ public class JavaMQLParserTest extends LightJavaCodeInsightFixtureTestCase5 {
         assertEquals(COLLECTION, result.namespace().collection());
         assertEquals(FIND_MANY, result.operation());
 
-        var predicate = (PredicateNode<PsiElement, Object>) result.children().get(0);
+        var predicate = (BinOpNode<PsiElement>) result.children().get(0);
         assertEquals("a", predicate.field());
-        assertEquals(1, predicate.value().inferValue().get());
+        assertEquals(1, valueOfBinOp(predicate));
     }
 
     @Test
@@ -55,14 +54,14 @@ public class JavaMQLParserTest extends LightJavaCodeInsightFixtureTestCase5 {
         assertEquals(FIND_MANY, result.operation());
 
         var predicate = (AndNode<PsiElement>) result.children().get(0);
-        var firstCond = (PredicateNode<PsiElement, Object>) predicate.children().get(0);
-        var secondCond = (PredicateNode<PsiElement, Object>) predicate.children().get(1);
+        var firstCond = (BinOpNode<PsiElement>) predicate.children().get(0);
+        var secondCond = (BinOpNode<PsiElement>) predicate.children().get(1);
 
         assertEquals("a", firstCond.field());
-        assertEquals(1, firstCond.value().inferValue().get());
+        assertEquals(1, valueOfBinOp(firstCond));
 
         assertEquals("b", secondCond.field());
-        assertEquals(2, secondCond.value().inferValue().get());
+        assertEquals(2, valueOfBinOp(secondCond));
     }
 
     @Test
@@ -74,14 +73,14 @@ public class JavaMQLParserTest extends LightJavaCodeInsightFixtureTestCase5 {
         assertEquals(FIND_MANY, result.operation());
 
         var predicate = (OrNode<PsiElement>) result.children().get(0);
-        var firstCond = (PredicateNode<PsiElement, Object>) predicate.children().get(0);
-        var secondCond = (PredicateNode<PsiElement, Object>) predicate.children().get(1);
+        var firstCond = (BinOpNode<PsiElement>) predicate.children().get(0);
+        var secondCond = (BinOpNode<PsiElement>) predicate.children().get(1);
 
         assertEquals("a", firstCond.field());
-        assertEquals(1, firstCond.value().inferValue().get());
+        assertEquals(1, valueOfBinOp(firstCond));
 
         assertEquals("b", secondCond.field());
-        assertEquals(2, secondCond.value().inferValue().get());
+        assertEquals(2, valueOfBinOp(secondCond));
     }
 
     @Test
@@ -93,14 +92,14 @@ public class JavaMQLParserTest extends LightJavaCodeInsightFixtureTestCase5 {
         assertEquals(FIND_MANY, result.operation());
 
         var predicate = (NorNode<PsiElement>) result.children().get(0);
-        var firstCond = (PredicateNode<PsiElement, Object>) predicate.children().get(0);
-        var secondCond = (PredicateNode<PsiElement, Object>) predicate.children().get(1);
+        var firstCond = (BinOpNode<PsiElement>) predicate.children().get(0);
+        var secondCond = (BinOpNode<PsiElement>) predicate.children().get(1);
 
         assertEquals("a", firstCond.field());
-        assertEquals(1, firstCond.value().inferValue().get());
+        assertEquals(1, valueOfBinOp(firstCond));
 
         assertEquals("b", secondCond.field());
-        assertEquals(2, secondCond.value().inferValue().get());
+        assertEquals(2, valueOfBinOp(secondCond));
     }
 
     private QueryNode<PsiElement> parseValid(PsiMethodCallExpression methodCallExpression) {
@@ -112,6 +111,7 @@ public class JavaMQLParserTest extends LightJavaCodeInsightFixtureTestCase5 {
         var invalidNode = (InvalidMQLNode<?>) result;
         throw new IllegalArgumentException(invalidNode.reason().toString());
     }
+
     private PsiMethodCallExpression withJavaQuery(String javaQuery) {
         var javaClassName = getTestName(false);
         var javaCode = """
@@ -136,5 +136,10 @@ public class JavaMQLParserTest extends LightJavaCodeInsightFixtureTestCase5 {
                         ));
 
         return (PsiMethodCallExpression) elements[0];
+    }
+
+    @NotNull
+    private static Object valueOfBinOp(BinOpNode<PsiElement> predicate) {
+        return ((ValueNode<PsiElement, Object>) predicate.children().get(0)).inferValue().get();
     }
 }
