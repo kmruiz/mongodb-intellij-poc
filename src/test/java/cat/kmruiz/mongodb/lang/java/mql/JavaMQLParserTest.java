@@ -17,6 +17,7 @@ import org.jetbrains.annotations.Nullable;
 import org.junit.jupiter.api.Test;
 
 import static cat.kmruiz.mongodb.services.mql.ast.QueryNode.Operation.FIND_MANY;
+import static cat.kmruiz.mongodb.services.mql.ast.QueryNode.Operation.FIND_ONE;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
 @RunsInEdt
@@ -62,6 +63,24 @@ public class JavaMQLParserTest extends LightJavaCodeInsightFixtureTestCase5 {
 
         assertEquals("b", secondCond.field());
         assertEquals(2, valueOfBinOp(secondCond));
+    }
+
+    @Test
+    void should_understand_find_one_queries_with_limit() {
+        var result = parseValid(withJavaQuery("collection.find(Filters.eq(\"a\", 1)).limit(1   )"));
+
+        assertEquals(DATABASE, result.namespace().database());
+        assertEquals(COLLECTION, result.namespace().collection());
+        assertEquals(FIND_ONE, result.operation());
+    }
+
+    @Test
+    void should_understand_find_one_queries_with_first() {
+        var result = parseValid(withJavaQuery("collection.find(Filters.eq(\"a\", 1)).first()"));
+
+        assertEquals(DATABASE, result.namespace().database());
+        assertEquals(COLLECTION, result.namespace().collection());
+        assertEquals(FIND_ONE, result.operation());
     }
 
     @Test

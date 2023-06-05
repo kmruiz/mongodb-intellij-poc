@@ -13,12 +13,15 @@ import cat.kmruiz.mongodb.services.mql.ast.varops.NorNode;
 import cat.kmruiz.mongodb.services.mql.ast.varops.OrNode;
 import com.intellij.psi.*;
 import com.intellij.psi.search.GlobalSearchScope;
+import com.intellij.psi.util.PsiTreeUtil;
 import org.jetbrains.annotations.NotNull;
 
 import java.util.*;
 
 public final class JavaMQLParser {
     public Node<PsiElement> parse(@NotNull PsiMethodCallExpression methodCall) {
+        var parent = findContainingCallChain(methodCall);
+
         var declarationOfCollection = findReferenceToCollection(methodCall);
         if (declarationOfCollection == null) {
             return new InvalidMQLNode<>(methodCall, InvalidMQLNode.Reason.UNKNOWN_NAMESPACE);
@@ -30,7 +33,7 @@ public final class JavaMQLParser {
         }
 
         var methodRefCall = methodCall.getMethodExpression().getCanonicalText();
-        var operation = inferOperationFromMethod(methodRefCall);
+        var operation = inferOperationFromMethod(parent, methodRefCall);
         var predicates = new ArrayList<Node<PsiElement>>();
 
         var maybeQueryDsl = fromArgumentListIfValid(methodCall, 0);
@@ -181,9 +184,14 @@ public final class JavaMQLParser {
         return MongoDBNamespace.defaultTest();
     }
 
-    private static QueryNode.Operation inferOperationFromMethod(@NotNull String methodRefCall) {
+    private static QueryNode.Operation inferOperationFromMethod(PsiMethodCallExpression parent, @NotNull String methodRefCall) {
         if (methodRefCall.endsWith("find")) {
-            return QueryNode.Operation.FIND_MANY;
+            var allCursorModifiers = PsiTreeUtil.collectElementsOfType(parent, PsiMethodCallExpression.class);
+            var isFindOne = allCursorModifiers.stream()
+                    .map(call -> call.getText().replaceAll("\\s+", ""))
+                    .anyMatch(call -> call.endsWith("limit(1)") || call.endsWith("first()"));
+
+            return isFindOne ? QueryNode.Operation.FIND_ONE : QueryNode.Operation.FIND_MANY;
         } else if (methodRefCall.endsWith("updateOne")) {
             return QueryNode.Operation.UPDATE_ONE;
         } else if (methodRefCall.endsWith("updateMany")) {
@@ -270,5 +278,14 @@ public final class JavaMQLParser {
         }
 
         return null;
+    }
+
+    private PsiMethodCallExpression findContainingCallChain(PsiMethodCallExpression expr) {
+        var parent = expr.getParent();
+        if (parent instanceof PsiReferenceExpression refExpr) {
+            return (PsiMethodCallExpression) refExpr.getParent();
+        }
+
+        return expr;
     }
 }
