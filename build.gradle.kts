@@ -48,9 +48,15 @@ tasks {
     buildSearchableOptions {
         enabled = false
     }
+
+    test {
+        useJUnitPlatform()
+    }
 }
 
 dependencies {
     implementation("org.mongodb:mongodb-driver-sync:4.9.1")
-    implementation("com.github.freva:ascii-table:1.8.0")
+    testImplementation("org.junit.jupiter:junit-jupiter-api:5.8.1")
+    testImplementation("org.junit.jupiter:junit-jupiter:5.8.1")
+    testRuntimeOnly("org.junit.jupiter:junit-jupiter-engine:5.8.1")
 }
