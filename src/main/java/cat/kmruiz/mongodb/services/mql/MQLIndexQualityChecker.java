@@ -1,6 +1,8 @@
 package cat.kmruiz.mongodb.services.mql;
 
+import cat.kmruiz.mongodb.lang.java.quickfix.AddJavaDocForNamespace;
 import cat.kmruiz.mongodb.services.MongoDBFacade;
+import cat.kmruiz.mongodb.services.mql.ast.InvalidMQLNode;
 import cat.kmruiz.mongodb.services.mql.ast.Node;
 import cat.kmruiz.mongodb.services.mql.ast.QueryNode;
 import cat.kmruiz.mongodb.services.mql.ast.binops.BinOpNode;
@@ -10,6 +12,7 @@ import com.intellij.codeInspection.ProblemsHolder;
 import com.intellij.openapi.components.Service;
 import com.intellij.openapi.project.Project;
 import com.intellij.psi.PsiElement;
+import com.intellij.psi.PsiJavaDocumentedElement;
 
 import java.util.HashSet;
 import java.util.List;
@@ -63,6 +66,15 @@ public final class MQLIndexQualityChecker implements MQLQueryQualityChecker {
                                 query.namespace().collection(),
                                 IndexBeautifier.beautify(usableIndexes)));
             }
+        }
+    }
+
+    @Override
+    public void checkInvalid(InvalidMQLNode<PsiElement> invalid, ProblemsHolder holder) {
+        if (invalid.reason() == InvalidMQLNode.Reason.UNKNOWN_NAMESPACE && invalid.collectionReference() != null) {
+            holder.registerProblem(invalid.collectionReference(),
+                    InspectionBundle.message("inspection.QueryIndexingQualityInspection.couldNotDetectNamespace"),
+                    new AddJavaDocForNamespace((PsiJavaDocumentedElement) invalid.collectionReference()));
         }
     }
 

@@ -3,6 +3,7 @@ package cat.kmruiz.mongodb.lang.java;
 import cat.kmruiz.mongodb.lang.java.mql.JavaMQLParser;
 import cat.kmruiz.mongodb.services.mql.MQLQueryQualityChecker;
 import cat.kmruiz.mongodb.services.mql.MQLTypeChecker;
+import cat.kmruiz.mongodb.services.mql.ast.InvalidMQLNode;
 import cat.kmruiz.mongodb.services.mql.ast.QueryNode;
 import com.intellij.codeInspection.AbstractBaseJavaLocalInspectionTool;
 import com.intellij.codeInspection.ProblemsHolder;
@@ -36,6 +37,8 @@ public abstract class AbstractJavaQueryQualityInspection extends AbstractBaseJav
                     var parsedQuery = parser.parse(expression);
                     if (parsedQuery instanceof QueryNode<PsiElement> query) {
                         checker.check(query, holder);
+                    } else if (parsedQuery instanceof InvalidMQLNode<PsiElement> invalid) {
+                        checker.checkInvalid(invalid, holder);
                     }
                 }
             }

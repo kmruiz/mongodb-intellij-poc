@@ -27,12 +27,12 @@ public final class JavaMQLParser {
 
         var declarationOfCollection = findReferenceToCollection(methodCall);
         if (declarationOfCollection == null) {
-            return new InvalidMQLNode<>(methodCall, InvalidMQLNode.Reason.UNKNOWN_NAMESPACE);
+            return new InvalidMQLNode<>(methodCall, null, InvalidMQLNode.Reason.UNKNOWN_NAMESPACE);
         }
 
         var mdbNamespace = inferNamespace(declarationOfCollection);
         if (!mdbNamespace.isKnown()) {
-            return new InvalidMQLNode<>(methodCall, InvalidMQLNode.Reason.UNKNOWN_NAMESPACE);
+            return new InvalidMQLNode<>(methodCall, declarationOfCollection, InvalidMQLNode.Reason.UNKNOWN_NAMESPACE);
         }
 
         var methodRefCall = methodCall.getMethodExpression().getCanonicalText();
@@ -41,13 +41,13 @@ public final class JavaMQLParser {
 
         var maybeQueryDsl = fromArgumentListIfValid(methodCall, 0);
         if (maybeQueryDsl.isEmpty()) {
-            return new InvalidMQLNode<>(methodCall, InvalidMQLNode.Reason.INVALID_QUERY);
+            return new InvalidMQLNode<>(methodCall, declarationOfCollection, InvalidMQLNode.Reason.INVALID_QUERY);
         }
 
         var queryDsl = maybeQueryDsl.get();
         resolveBsonDocumentChain(queryDsl, predicates);
 
-        return new QueryNode<>(mdbNamespace, operation, methodCall, predicates, QueryNode.ReadPreference.PRIMARY, 0);
+        return new QueryNode<>(mdbNamespace, operation, methodCall, declarationOfCollection, predicates, QueryNode.ReadPreference.PRIMARY, 0);
     }
 
     private void resolveBsonDocumentChain(PsiExpression expr, List<Node<PsiElement>> predicates) {
@@ -119,13 +119,13 @@ public final class JavaMQLParser {
 
         if (field instanceof PsiLiteralExpression literalExpr) {
             var fieldName = literalExpr.getValue().toString();
-            return new BinOpNode<>(origin, operation, fieldName, Collections.singletonList(valueNode));
+            return new BinOpNode<>(origin, operation, fieldName, field, Collections.singletonList(valueNode));
         } else {
             var resolvedField = inferConstantValue(field);
             if (resolvedField == null) {
-                return new BinOpNode<>(origin, operation, null, Collections.singletonList(valueNode));
+                return new BinOpNode<>(origin, operation, null, field, Collections.singletonList(valueNode));
             } else {
-                return new BinOpNode<>(origin, operation, resolvedField.toString(), Collections.singletonList(valueNode));
+                return new BinOpNode<>(origin, operation, resolvedField.toString(), field, Collections.singletonList(valueNode));
             }
         }
     }
@@ -189,20 +189,20 @@ public final class JavaMQLParser {
     }
 
     private static QueryNode.Operation inferOperationFromMethod(PsiMethodCallExpression parent, @NotNull String methodRefCall) {
-        if (methodRefCall.endsWith("find")) {
+        if (methodRefCall.contains("find(")) {
             var allCursorModifiers = PsiTreeUtil.collectElementsOfType(parent, PsiMethodCallExpression.class);
             var isFindOne = allCursorModifiers.stream()
                     .map(call -> call.getText().replaceAll("\\s+", ""))
-                    .anyMatch(call -> call.endsWith("limit(1)") || call.endsWith("first()"));
+                    .anyMatch(call -> call.contains("limit(1)") || call.endsWith("first()"));
 
             return isFindOne ? QueryNode.Operation.FIND_ONE : QueryNode.Operation.FIND_MANY;
-        } else if (methodRefCall.endsWith("updateOne")) {
+        } else if (methodRefCall.contains("updateOne")) {
             return QueryNode.Operation.UPDATE_ONE;
-        } else if (methodRefCall.endsWith("updateMany")) {
+        } else if (methodRefCall.contains("updateMany")) {
             return QueryNode.Operation.UPDATE_MANY;
-        } else if (methodRefCall.endsWith("deleteOne")) {
+        } else if (methodRefCall.contains("deleteOne")) {
             return QueryNode.Operation.DELETE_ONE;
-        } else if (methodRefCall.endsWith("deleteMany")) {
+        } else if (methodRefCall.contains("deleteMany")) {
             return QueryNode.Operation.DELETE_MANY;
         } else {
             return QueryNode.Operation.UNKNOWN;
@@ -215,6 +215,14 @@ public final class JavaMQLParser {
             var queryArg = Objects.requireNonNullElse(args.getExpressionTypes()[argIdx], PsiType.getTypeByName("org.bson.Document", methodCall.getProject(), GlobalSearchScope.EMPTY_SCOPE));
             if (queryArg.isValid() && (queryArg.equalsToText("org.bson.Document") || queryArg.equalsToText("org.bson.conversions.Bson"))) {
                 return Optional.of(args.getExpressions()[argIdx]);
+            } else {
+                var allQueryExpr = findAllQueryExpr(methodCall);
+                for (var idx = allQueryExpr.size() - 1; idx >= 0; idx--) {
+                    var result = fromArgumentListIfValid(allQueryExpr.get(idx), argIdx);
+                    if (result.isPresent()) {
+                        return result;
+                    }
+                }
             }
         }
 
@@ -293,7 +301,7 @@ public final class JavaMQLParser {
         return current;
     }
 
-    public static BsonType inferTypeOf(PsiExpression expression) {
+    private static BsonType inferTypeOf(PsiExpression expression) {
         return switch (expression.getType().getCanonicalText()) {
             case "java.lang.String" -> BsonType.STRING;
             case "boolean", "java.lang.Boolean" -> BsonType.BOOLEAN;
@@ -303,5 +311,17 @@ public final class JavaMQLParser {
             case "java.math.BigDecimal" -> BsonType.DECIMAL;
             default -> BsonType.ANY;
         };
+    }
+
+    private static List<PsiMethodCallExpression> findAllQueryExpr(PsiElement expr) {
+        var result = new ArrayList<PsiMethodCallExpression>();
+        for (var child = expr.getFirstChild(); child != null; child = child.getNextSibling()) {
+            result.addAll(findAllQueryExpr(child));
+            if (child instanceof PsiMethodCallExpression callExpr) {
+                result.add(callExpr);
+            }
+        }
+
+        return result;
     }
 }

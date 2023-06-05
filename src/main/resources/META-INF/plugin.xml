@@ -30,7 +30,7 @@
                            displayType="BALLOON"
                            key="cat.kmruiz.mongodb.notification.group"/>
 
-        <codeInsight.inlayProvider language="JAVA" implementationClass="cat.kmruiz.mongodb.lang.java.inlay.QueryInferenceInlay"/>
+        <codeInsight.inlayProvider language="JAVA" implementationClass="cat.kmruiz.mongodb.lang.java.inlay.QueryFieldTypeInferenceInlay"/>
 
         <completion.contributor language="JAVA"
                                 implementationClass="cat.kmruiz.mongodb.lang.java.completion.MongoDBSchemaCompletionContributor"/>

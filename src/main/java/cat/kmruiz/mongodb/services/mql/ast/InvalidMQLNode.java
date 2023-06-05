@@ -3,7 +3,7 @@ package cat.kmruiz.mongodb.services.mql.ast;
 import java.util.Collections;
 import java.util.List;
 
-public record InvalidMQLNode<Origin>(Origin origin, Reason reason) implements Node<Origin> {
+public record InvalidMQLNode<Origin>(Origin origin, Origin collectionReference, Reason reason) implements Node<Origin> {
     public enum Reason {
         UNKNOWN_NAMESPACE, INVALID_QUERY
     }

@@ -1,7 +1,9 @@
 package cat.kmruiz.mongodb.lang.java.completion;
 
-import cat.kmruiz.mongodb.lang.java.perception.MQLQueryPerception;
+import cat.kmruiz.mongodb.infrastructure.PsiMongoDBTreeUtils;
+import cat.kmruiz.mongodb.lang.java.mql.JavaMQLParser;
 import cat.kmruiz.mongodb.services.MongoDBFacade;
+import cat.kmruiz.mongodb.services.mql.ast.QueryNode;
 import com.intellij.codeInsight.completion.*;
 import com.intellij.codeInsight.lookup.LookupElementBuilder;
 import com.intellij.openapi.util.IconLoader;
@@ -9,6 +11,7 @@ import com.intellij.openapi.util.text.Strings;
 import com.intellij.patterns.PlatformPatterns;
 import com.intellij.psi.PsiElement;
 import com.intellij.psi.PsiMethodCallExpression;
+import com.intellij.psi.util.PsiTreeUtil;
 import com.intellij.ui.JBColor;
 import com.intellij.util.ProcessingContext;
 import org.jetbrains.annotations.NotNull;
@@ -25,92 +28,51 @@ public class MongoDBSchemaCompletionContributor extends CompletionContributor {
                     @Override
                     protected void addCompletions(@NotNull CompletionParameters parameters, @NotNull ProcessingContext context, @NotNull CompletionResultSet result) {
                         var currentProject = parameters.getEditor().getProject();
+                        var parser = currentProject.getService(JavaMQLParser.class);
                         var mongodbFacade = currentProject.getService(MongoDBFacade.class);
-                        var queryPerception = new MQLQueryPerception(mongodbFacade);
 
-                        var psiElement = parameters.getPosition().getParent();
-                        MQLQueryPerception.MQLQueryOrNotPerceived perception = null;
-
-                        var queryCall = inQueryCall(psiElement);
-                        if (queryCall == null) {
+                        var currentMethodExpression = PsiMongoDBTreeUtils.getMongoDBQueryExpression(parameters.getPosition());
+                        if (currentMethodExpression == null) {
                             return;
                         }
 
-                        var resolvedMethod = queryCall.resolveMethod();
+                        var parsedQuery = parser.parse(currentMethodExpression);
+                        if (parsedQuery instanceof QueryNode<PsiElement> query) {
+                            var schemaInfo = mongodbFacade.schemaOf(query.namespace());
 
-                        if (resolvedMethod == null) {
-                            return;
-                        }
-
-                        var owningClass = resolvedMethod.getContainingClass();
-
-                        if (owningClass == null) {
-                            return;
-                        }
-
-                        if (!owningClass.getQualifiedName().equals("com.mongodb.client.MongoCollection")) {
-                            return;
-                        }
-
-                        perception = queryPerception.parse(queryCall);
-
-                        if (perception == null) {
-                            return;
-                        }
-
-                        if (!perception.hasBeenPerceived()) {
-                            return;
-                        }
-
-                        var schemaInfo = mongodbFacade.schemaOf(perception.database(), perception.collection());
-
-                        if (!schemaInfo.connected()) {
-                            return;
-                        }
-
-                        var schema = schemaInfo.result();
-                        for (var entry : schema.root().entrySet()) {
-                            var fieldName = entry.getKey();
-                            var value = entry.getValue();
-
-                            var tailText = " types: %s samples: %s".formatted(
-                                    Strings.join(value.types(), " | "),
-                                    Strings.join(value.samples().stream().limit(3).toList(), "|")
-                            );
-
-                            if (value.isIndexed()) {
-                                tailText = " [Indexed] " + tailText;
+                            if (!schemaInfo.connected()) {
+                                return;
                             }
 
-                            result.addElement(
-                                    PrioritizedLookupElement.withPriority(
-                                            LookupElementBuilder
-                                                    .create(fieldName)
-                                                    .withTailText(tailText)
-                                                    .withIcon(MONGODB_ICON)
-                                                    .withBoldness(value.isIndexed())
-                                                    .withItemTextForeground(value.isIndexed() ? JBColor.GREEN : JBColor.GRAY),
-                                            value.isIndexed() ? 150 : 50
-                                    )
-                            );
+                            var schema = schemaInfo.result();
+                            for (var entry : schema.root().entrySet()) {
+                                var fieldName = entry.getKey();
+                                var value = entry.getValue();
+
+                                var tailText = " types: %s samples: %s".formatted(
+                                        Strings.join(value.types(), " | "),
+                                        Strings.join(value.samples().stream().limit(3).toList(), "|")
+                                );
+
+                                if (value.isIndexed()) {
+                                    tailText = " [Indexed] " + tailText;
+                                }
+
+                                result.addElement(
+                                        PrioritizedLookupElement.withPriority(
+                                                LookupElementBuilder
+                                                        .create(fieldName)
+                                                        .withTailText(tailText)
+                                                        .withIcon(MONGODB_ICON)
+                                                        .withBoldness(value.isIndexed())
+                                                        .withItemTextForeground(value.isIndexed() ? JBColor.GREEN : JBColor.GRAY),
+                                                value.isIndexed() ? 150 : 50
+                                        )
+                                );
+                            }
                         }
                     }
                 });
     }
 
-    private PsiMethodCallExpression inQueryCall(PsiElement psiElement) {
-        var parent = psiElement;
-        do {
-            var prevParent = parent.getParent();
-            if (prevParent instanceof PsiMethodCallExpression && prevParent.getText().contains(".find")) {
-                return (PsiMethodCallExpression) prevParent;
-            }
-
-            if (prevParent == null || prevParent == parent) {
-                return null;
-            }
-
-            parent = prevParent;
-        } while (true);
-    }
 }

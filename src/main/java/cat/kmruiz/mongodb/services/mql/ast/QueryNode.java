@@ -8,6 +8,7 @@ public record QueryNode<Origin>(
         MongoDBNamespace namespace,
         Operation operation,
         Origin origin,
+        Origin collectionOrigin,
         List<Node<Origin>> children,
         ReadPreference readPreference,
         int maxStaleness
