@@ -159,6 +159,6 @@ public class JavaMQLParserTest extends LightJavaCodeInsightFixtureTestCase5 {
 
     @NotNull
     private static Object valueOfBinOp(BinOpNode<PsiElement> predicate) {
-        return ((ValueNode<PsiElement, Object>) predicate.children().get(0)).inferValue().get();
+        return ((ValueNode<PsiElement>) predicate.children().get(0)).inferValue().get();
     }
 }

@@ -5,12 +5,14 @@ import cat.kmruiz.mongodb.services.mql.ast.InvalidMQLNode;
 import cat.kmruiz.mongodb.services.mql.ast.Node;
 import cat.kmruiz.mongodb.services.mql.ast.QueryNode;
 import cat.kmruiz.mongodb.services.mql.ast.binops.BinOpNode;
+import cat.kmruiz.mongodb.services.mql.ast.types.BsonType;
 import cat.kmruiz.mongodb.services.mql.ast.values.ConstantValueNode;
 import cat.kmruiz.mongodb.services.mql.ast.values.ReferenceValueNode;
 import cat.kmruiz.mongodb.services.mql.ast.values.ValueNode;
 import cat.kmruiz.mongodb.services.mql.ast.varops.AndNode;
 import cat.kmruiz.mongodb.services.mql.ast.varops.NorNode;
 import cat.kmruiz.mongodb.services.mql.ast.varops.OrNode;
+import com.intellij.openapi.components.Service;
 import com.intellij.psi.*;
 import com.intellij.psi.search.GlobalSearchScope;
 import com.intellij.psi.util.PsiTreeUtil;
@@ -18,6 +20,7 @@ import org.jetbrains.annotations.NotNull;
 
 import java.util.*;
 
+@Service(Service.Level.PROJECT)
 public final class JavaMQLParser {
     public Node<PsiElement> parse(@NotNull PsiMethodCallExpression methodCall) {
         var parent = findContainingCallChain(methodCall);
@@ -105,12 +108,13 @@ public final class JavaMQLParser {
 
     private BinOpNode<PsiElement> resolveMQLPredicate(PsiElement origin, String operation, PsiExpression field, PsiExpression value) {
         var resolvedConstant = inferConstantValue(value);
-        ValueNode<PsiElement, Object> valueNode = null;
+        var inferredType = inferTypeOf(value);
+        ValueNode<PsiElement> valueNode = null;
 
         if (resolvedConstant == null) {
-            valueNode = new ReferenceValueNode<>(value, null);
+            valueNode = new ReferenceValueNode<>(value, inferredType);
         } else {
-            valueNode = new ConstantValueNode<>(value, null, resolvedConstant);
+            valueNode = new ConstantValueNode<>(value, inferredType, resolvedConstant);
         }
 
         if (field instanceof PsiLiteralExpression literalExpr) {
@@ -280,12 +284,24 @@ public final class JavaMQLParser {
         return null;
     }
 
-    private PsiMethodCallExpression findContainingCallChain(PsiMethodCallExpression expr) {
-        var parent = expr.getParent();
+    private PsiMethodCallExpression findContainingCallChain(PsiMethodCallExpression current) {
+        var parent = current.getParent();
         if (parent instanceof PsiReferenceExpression refExpr) {
             return (PsiMethodCallExpression) refExpr.getParent();
         }
 
-        return expr;
+        return current;
+    }
+
+    public static BsonType inferTypeOf(PsiExpression expression) {
+        return switch (expression.getType().getCanonicalText()) {
+            case "java.lang.String" -> BsonType.STRING;
+            case "boolean", "java.lang.Boolean" -> BsonType.BOOLEAN;
+            case "short", "java.lang.Short", "int", "java.lang.Integer" -> BsonType.INTEGER;
+            case "long", "java.lang.Long", "java.math.BigInteger" -> BsonType.LONG;
+            case "float", "java.lang.Float", "double", "java.lang.Double" -> BsonType.DOUBLE;
+            case "java.math.BigDecimal" -> BsonType.DECIMAL;
+            default -> BsonType.ANY;
+        };
     }
 }

@@ -3,6 +3,7 @@ package cat.kmruiz.mongodb.lang.java.perception;
 import cat.kmruiz.mongodb.services.MongoDBFacade;
 import cat.kmruiz.mongodb.services.mql.MQLQuery;
 import cat.kmruiz.mongodb.services.mql.MongoDBNamespace;
+import cat.kmruiz.mongodb.services.mql.ast.types.BsonType;
 import cat.kmruiz.mongodb.services.mql.reporting.QueryWarning;
 import cat.kmruiz.mongodb.services.schema.CollectionSchema;
 import cat.kmruiz.mongodb.ui.InspectionBundle;
@@ -181,7 +182,7 @@ public class MQLQueryPerception {
             if (resolvedField == null) {
                 return MQLQuery.Predicate.newWildcard(field, value, warnings);
             } else {
-                return MQLQuery.Predicate.named(field,value, resolvedField, providedTypeOnQuery, expectedTypeDef.types(), warnings);
+                return MQLQuery.Predicate.named(field, value, resolvedField, providedTypeOnQuery, expectedTypeDef.types(), warnings);
             }
         }
     }
@@ -310,15 +311,15 @@ public class MQLQueryPerception {
         return null;
     }
 
-    public static CollectionSchema.FieldValue.Type inferTypeOf(PsiExpression expression) {
+    public static BsonType inferTypeOf(PsiExpression expression) {
         return switch (expression.getType().getCanonicalText()) {
-            case "java.lang.String" -> CollectionSchema.FieldValue.Type.STRING;
-            case "boolean", "java.lang.Boolean" -> CollectionSchema.FieldValue.Type.BOOLEAN;
-            case "short", "java.lang.Short", "int", "java.lang.Integer" -> CollectionSchema.FieldValue.Type.INTEGER;
-            case "long", "java.lang.Long", "java.math.BigInteger" -> CollectionSchema.FieldValue.Type.LONG;
-            case "float", "java.lang.Float", "double", "java.lang.Double" -> CollectionSchema.FieldValue.Type.DOUBLE;
-            case "java.math.BigDecimal" -> CollectionSchema.FieldValue.Type.DECIMAL;
-            default -> CollectionSchema.FieldValue.Type.ANY;
+            case "java.lang.String" -> BsonType.STRING;
+            case "boolean", "java.lang.Boolean" -> BsonType.BOOLEAN;
+            case "short", "java.lang.Short", "int", "java.lang.Integer" -> BsonType.INTEGER;
+            case "long", "java.lang.Long", "java.math.BigInteger" -> BsonType.LONG;
+            case "float", "java.lang.Float", "double", "java.lang.Double" -> BsonType.DOUBLE;
+            case "java.math.BigDecimal" -> BsonType.DECIMAL;
+            default -> BsonType.ANY;
         };
     }
 

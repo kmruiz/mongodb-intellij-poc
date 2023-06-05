@@ -2,6 +2,7 @@ package cat.kmruiz.mongodb.services;
 
 import cat.kmruiz.mongodb.services.mql.MQLIndex;
 import cat.kmruiz.mongodb.services.mql.MQLQuery;
+import cat.kmruiz.mongodb.services.mql.MongoDBNamespace;
 import cat.kmruiz.mongodb.services.schema.CollectionSchema;
 import com.intellij.openapi.components.Service;
 import com.intellij.openapi.project.Project;
@@ -99,6 +100,10 @@ public final class MongoDBFacade {
         var shardInfo = shardingColl.find(Filters.eq("_id", "%s.%s".formatted(database, collection))).limit(1).into(new ArrayList<>(1));
 
         return ConnectionAwareResult.resulting(!shardInfo.isEmpty());
+    }
+
+    public ConnectionAwareResult<CollectionSchema> schemaOf(MongoDBNamespace namespace) {
+        return schemaOf(namespace.database(), namespace.collection());
     }
 
     public ConnectionAwareResult<CollectionSchema> schemaOf(String database, String collection) {
