@@ -15,14 +15,14 @@ import com.intellij.openapi.util.text.Strings;
 import com.intellij.psi.PsiElement;
 
 @Service(Service.Level.PROJECT)
-public final class MQLTypeChecker {
+public final class MQLTypeChecker implements MQLQueryQualityChecker {
     private final MongoDBFacade mongoDBFacade;
 
     public MQLTypeChecker(Project project) {
         this.mongoDBFacade = project.getService(MongoDBFacade.class);
     }
 
-    public void typeCheck(QueryNode<PsiElement> query, ProblemsHolder holder) {
+    public void check(QueryNode<PsiElement> query, ProblemsHolder holder) {
         var schema = mongoDBFacade.schemaOf(query.namespace());
         if (!schema.connected()) {
             return;

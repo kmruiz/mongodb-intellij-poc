@@ -1,19 +1,14 @@
 package cat.kmruiz.mongodb.services.mql;
 
-import cat.kmruiz.mongodb.lang.java.quickfix.DeduceIndexQuickFix;
-import cat.kmruiz.mongodb.lang.java.quickfix.RunQueryOnSecondaryNode;
 import cat.kmruiz.mongodb.services.MongoDBFacade;
 import cat.kmruiz.mongodb.services.mql.ast.Node;
 import cat.kmruiz.mongodb.services.mql.ast.QueryNode;
 import cat.kmruiz.mongodb.services.mql.ast.binops.BinOpNode;
-import cat.kmruiz.mongodb.services.mql.ast.values.ValueNode;
-import cat.kmruiz.mongodb.services.schema.CollectionSchema;
 import cat.kmruiz.mongodb.ui.IndexBeautifier;
 import cat.kmruiz.mongodb.ui.InspectionBundle;
 import com.intellij.codeInspection.ProblemsHolder;
 import com.intellij.openapi.components.Service;
 import com.intellij.openapi.project.Project;
-import com.intellij.openapi.util.text.Strings;
 import com.intellij.psi.PsiElement;
 
 import java.util.HashSet;
@@ -21,14 +16,14 @@ import java.util.List;
 import java.util.Set;
 
 @Service(Service.Level.PROJECT)
-public final class MQLIndexChecker {
+public final class MQLIndexQualityChecker implements MQLQueryQualityChecker {
     private final MongoDBFacade mongoDBFacade;
 
-    public MQLIndexChecker(Project project) {
+    public MQLIndexQualityChecker(Project project) {
         this.mongoDBFacade = project.getService(MongoDBFacade.class);
     }
 
-    public void checkIndexes(QueryNode<PsiElement> query, ProblemsHolder holder) {
+    public void check(QueryNode<PsiElement> query, ProblemsHolder holder) {
         var indexResult = mongoDBFacade.indexesOfCollection(query.namespace());
         var shardingResult = mongoDBFacade.isCollectionSharded(query.namespace());
 
