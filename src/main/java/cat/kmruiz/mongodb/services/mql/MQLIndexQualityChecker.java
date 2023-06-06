@@ -1,6 +1,7 @@
 package cat.kmruiz.mongodb.services.mql;
 
 import cat.kmruiz.mongodb.lang.java.quickfix.AddJavaDocForNamespace;
+import cat.kmruiz.mongodb.lang.java.quickfix.DeduceIndexQuickFix;
 import cat.kmruiz.mongodb.services.MongoDBFacade;
 import cat.kmruiz.mongodb.services.mql.ast.InvalidMQLNode;
 import cat.kmruiz.mongodb.services.mql.ast.Node;
@@ -21,9 +22,11 @@ import java.util.Set;
 @Service(Service.Level.PROJECT)
 public final class MQLIndexQualityChecker implements MQLQueryQualityChecker {
     private final MongoDBFacade mongoDBFacade;
+    private final MQLIndexDesigner mqlIndexDesigner;
 
     public MQLIndexQualityChecker(Project project) {
         this.mongoDBFacade = project.getService(MongoDBFacade.class);
+        this.mqlIndexDesigner = project.getService(MQLIndexDesigner.class);
     }
 
     public void check(QueryNode<PsiElement> query, ProblemsHolder holder) {
@@ -43,8 +46,9 @@ public final class MQLIndexQualityChecker implements MQLQueryQualityChecker {
                     InspectionBundle.message("inspection.QueryIndexingQualityInspection.basicQueryNotCovered",
                             query.namespace().database(),
                             query.namespace().collection(),
-                            IndexBeautifier.beautify(indexResult.result()))
-                    );
+                            IndexBeautifier.beautify(indexResult.result())),
+                    new DeduceIndexQuickFix(mongoDBFacade, query.namespace(), mqlIndexDesigner.designIndexForQuery(query))
+            );
         } else if (usableIndexes.size() > 1) {
             if (isShardedCollection) {
                 boolean canUseShardingKey = usableIndexes.stream().anyMatch(MQLIndex::shardKey);
@@ -57,7 +61,7 @@ public final class MQLIndexQualityChecker implements MQLQueryQualityChecker {
                                     query.namespace().collection(),
                                     IndexBeautifier.beautify(usableIndexes.get(0)),
                                     IndexBeautifier.beautify(shardingKey))
-                            );
+                    );
                 }
             } else {
                 holder.registerProblem(query.origin(),

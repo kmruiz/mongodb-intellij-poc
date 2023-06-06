@@ -77,6 +77,6 @@ public final class MongoDBConfigurationResolver {
             connectedDatasources.add(dataSourceName);
         }
 
-        return MongoDBConnectionConfiguration.configured(connectionConfig.getUrl());
+        return MongoDBConnectionConfiguration.configured(connectionConfig.getUrl(), dataSource);
     }
 }
