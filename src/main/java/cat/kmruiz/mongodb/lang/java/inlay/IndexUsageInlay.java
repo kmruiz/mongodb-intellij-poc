@@ -115,7 +115,6 @@ public class IndexUsageInlay implements InlayHintsProvider<NoSettings> {
                     this.addedInlays.put(currentMethodExpression.getTextOffset(), indexHash);
                 }
 
-                return true;
             }
 
             return true;
