@@ -102,9 +102,9 @@ public final class MongoDBFacade {
         return ConnectionAwareResult.resulting(schema);
     }
 
-    public boolean openDatabaseEditorAppendingCode(String code) {
+    public void openDatabaseEditorAppendingCode(String code) {
         if (assertOfflineMode()) {
-            return false;
+            return;
         }
 
         var activeEditor = EditorTracker.getInstance(currentProject).getActiveEditors().stream().filter(it -> {
@@ -125,7 +125,7 @@ public final class MongoDBFacade {
         }
 
         if (activeEditor.isEmpty()) {
-            return false;
+            return;
         }
 
         var editor = activeEditor.get();
@@ -140,7 +140,6 @@ public final class MongoDBFacade {
             document.insertString(document.getTextLength(), code + "\n");
         });
 
-        return true;
     }
 
     private boolean assertOfflineMode() {
