@@ -31,9 +31,8 @@
                            key="cat.kmruiz.mongodb.notification.group"/>
 
         <codeInsight.inlayProvider language="JAVA" implementationClass="cat.kmruiz.mongodb.lang.java.inlay.QueryFieldTypeInferenceInlay"/>
-
-        <completion.contributor language="JAVA"
-                                implementationClass="cat.kmruiz.mongodb.lang.java.completion.MongoDBSchemaCompletionContributor"/>
+        <codeInsight.inlayProvider language="JAVA" implementationClass="cat.kmruiz.mongodb.lang.java.inlay.IndexUsageInlay"/>
+        <completion.contributor language="JAVA" implementationClass="cat.kmruiz.mongodb.lang.java.completion.MongoDBSchemaCompletionContributor"/>
 
         <localInspection language="JAVA"
                          bundle="messages.InspectionBundle"
@@ -54,16 +53,6 @@
                          enabledByDefault="true"
                          level="WARNING"
                          implementationClass="cat.kmruiz.mongodb.lang.java.IndexCheckingInspection"/>
-
-<!--        <localInspection language="JAVA"-->
-<!--                         bundle="messages.InspectionBundle"-->
-<!--                         key="inspection.QueryIndexingQualityInspection"-->
-<!--                         groupPath="Java"-->
-<!--                         groupBundle="messages.configuration"-->
-<!--                         groupKey="inspection.probable.mongodb.performance.issues"-->
-<!--                         enabledByDefault="true"-->
-<!--                         level="WARNING"-->
-<!--                         implementationClass="cat.kmruiz.mongodb.lang.java.QueryIndexingQualityInspection"/>-->
     </extensions>
 
     <applicationListeners>
