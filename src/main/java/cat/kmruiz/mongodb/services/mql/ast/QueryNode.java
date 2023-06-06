@@ -14,7 +14,23 @@ public record QueryNode<Origin>(
         int maxStaleness
 ) implements Node<Origin> {
     public enum Operation {
-        FIND_ONE, FIND_MANY, UPDATE_ONE, UPDATE_MANY, DELETE_ONE, DELETE_MANY, UNKNOWN
+        FIND_ONE(false),
+        FIND_MANY(true),
+        UPDATE_ONE(false),
+        UPDATE_MANY(true),
+        DELETE_ONE(false),
+        DELETE_MANY(true),
+        UNKNOWN(true);
+
+        private final boolean multiple;
+
+        Operation(boolean multiple) {
+            this.multiple = multiple;
+        }
+
+        public boolean isMultiple() {
+            return multiple;
+        }
     }
 
     public enum ReadPreference {

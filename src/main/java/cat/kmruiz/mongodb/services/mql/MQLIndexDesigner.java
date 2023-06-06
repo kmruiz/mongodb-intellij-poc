@@ -40,7 +40,7 @@ public final class MQLIndexDesigner {
             indexDef.add(new MQLIndex.MQLIndexField(r, MQLIndex.MQLIndexType.ASC));
         }
 
-        return new MQLIndex("", indexDef, false);
+        return new MQLIndex("", indexDef, false, false);
     }
 
     private void splitIntoESR(Node<?> node, HashSet<String> equality, HashSet<String> sort, HashSet<String> range) {

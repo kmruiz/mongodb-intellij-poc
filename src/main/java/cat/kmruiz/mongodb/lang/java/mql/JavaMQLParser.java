@@ -189,11 +189,11 @@ public final class JavaMQLParser {
     }
 
     private static QueryNode.Operation inferOperationFromMethod(PsiMethodCallExpression parent, @NotNull String methodRefCall) {
-        if (methodRefCall.contains("find(")) {
+        if (methodRefCall.contains("find")) {
             var allCursorModifiers = PsiTreeUtil.collectElementsOfType(parent, PsiMethodCallExpression.class);
             var isFindOne = allCursorModifiers.stream()
                     .map(call -> call.getText().replaceAll("\\s+", ""))
-                    .anyMatch(call -> call.contains("limit(1)") || call.endsWith("first()"));
+                    .anyMatch(call -> call.contains("limit(1)") || call.endsWith("first()") || call.endsWith("get(0)"));
 
             return isFindOne ? QueryNode.Operation.FIND_ONE : QueryNode.Operation.FIND_MANY;
         } else if (methodRefCall.contains("updateOne")) {
@@ -212,7 +212,7 @@ public final class JavaMQLParser {
     private static Optional<PsiExpression> fromArgumentListIfValid(@NotNull PsiMethodCallExpression methodCall, int argIdx) {
         var args = methodCall.getArgumentList();
         if (args.getExpressionCount() >= argIdx) {
-            var queryArg = Objects.requireNonNullElse(args.getExpressionTypes()[argIdx], PsiType.getTypeByName("org.bson.Document", methodCall.getProject(), GlobalSearchScope.EMPTY_SCOPE));
+            var queryArg = Objects.requireNonNullElse(args.getExpressionTypes().length >= argIdx ? args.getExpressionTypes()[argIdx] : null, PsiType.getTypeByName("org.bson.Document", methodCall.getProject(), GlobalSearchScope.EMPTY_SCOPE));
             if (queryArg.isValid() && (queryArg.equalsToText("org.bson.Document") || queryArg.equalsToText("org.bson.conversions.Bson"))) {
                 return Optional.of(args.getExpressions()[argIdx]);
             } else {

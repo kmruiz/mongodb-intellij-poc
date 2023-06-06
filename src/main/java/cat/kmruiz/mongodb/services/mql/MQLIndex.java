@@ -4,8 +4,9 @@ import cat.kmruiz.mongodb.infrastructure.language.ListOperation;
 import org.bson.Document;
 
 import java.util.List;
+import java.util.Objects;
 
-public record MQLIndex(String indexName, List<MQLIndexField> definition, boolean shardKey) {
+public record MQLIndex(String indexName, List<MQLIndexField> definition, boolean shardKey, boolean unique) {
     enum MQLIndexType {
         ASC("1"),
         DESC("-1"),
@@ -33,6 +34,8 @@ public record MQLIndex(String indexName, List<MQLIndexField> definition, boolean
     public static MQLIndex parseIndex(Document document) {
         var name = document.getString("name");
         var definition = document.get("key", Document.class);
+        var isUnique = Objects.requireNonNullElse(document.get("unique", Boolean.class), false);
+
         var parsedDef = definition.entrySet().stream().map(kv -> {
             var keyName = kv.getKey();
             var keyValue = kv.getValue().toString();
@@ -44,11 +47,11 @@ public record MQLIndex(String indexName, List<MQLIndexField> definition, boolean
             });
         }).toList();
 
-        return new MQLIndex(name, parsedDef, false);
+        return new MQLIndex(name, parsedDef, false, isUnique);
     }
 
     public MQLIndex markAsShardingKey() {
-        return new MQLIndex(indexName, definition, true);
+        return new MQLIndex(indexName, definition, true, unique);
     }
 
     public boolean isSameAs(MQLIndex otherIndex) {
@@ -61,10 +64,11 @@ public record MQLIndex(String indexName, List<MQLIndexField> definition, boolean
 
     public String toJson() {
         return """
-                {"name":"%s","key":{%s}}"""
+                {"name":"%s","key":{%s}, "unique": %s}"""
                 .formatted(
                         indexName,
-                        String.join(",", definition.stream().map(MQLIndexField::toJson).toList())
+                        String.join(",", definition.stream().map(MQLIndexField::toJson).toList()),
+                        unique
                 );
     }
 

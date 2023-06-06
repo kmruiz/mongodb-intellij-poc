@@ -70,6 +70,15 @@ public final class MQLIndexQualityChecker implements MQLQueryQualityChecker {
                                 query.namespace().collection(),
                                 IndexBeautifier.beautify(usableIndexes)));
             }
+        } else {
+            var index = usableIndexes.get(0);
+            if (!index.unique() && !query.operation().isMultiple()) {
+                holder.registerProblem(query.origin(),
+                        InspectionBundle.message("inspection.QueryIndexingQualityInspection.runningFindOneOnNonUniqueIndex",
+                                query.namespace().database(),
+                                query.namespace().collection(),
+                                IndexBeautifier.beautify(index)));
+            }
         }
     }
 
