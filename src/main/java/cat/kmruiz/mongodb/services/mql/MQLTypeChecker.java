@@ -21,7 +21,7 @@ public final class MQLTypeChecker implements MQLQueryQualityChecker {
         this.mongoDBFacade = project.getService(MongoDBFacade.class);
     }
 
-    public void check(QueryNode<PsiElement> query, ProblemsHolder holder) {
+    public void check(QueryNode query, ProblemsHolder holder) {
         var schema = mongoDBFacade.schemaOf(query.namespace());
         if (!schema.connected()) {
             return;
@@ -30,10 +30,10 @@ public final class MQLTypeChecker implements MQLQueryQualityChecker {
         typeCheckRecursively(query, schema.result(), holder);
     }
 
-    private void typeCheckRecursively(Node<PsiElement> node, CollectionSchema schema, ProblemsHolder holder) {
-        if (node instanceof BinOpNode<PsiElement> binOp) {
+    private void typeCheckRecursively(Node node, CollectionSchema schema, ProblemsHolder holder) {
+        if (node instanceof BinOpNode binOp) {
             for (var cond : binOp.children()) {
-                if (cond instanceof ValueNode<PsiElement> refVal) {
+                if (cond instanceof ValueNode refVal) {
                     var fieldSchema = schema.ofField(binOp.field().name());
                     if (!fieldSchema.supportsProvidedType(refVal.type())) {
                         holder.registerProblem(

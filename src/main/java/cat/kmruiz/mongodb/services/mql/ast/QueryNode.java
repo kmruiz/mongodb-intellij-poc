@@ -1,20 +1,21 @@
 package cat.kmruiz.mongodb.services.mql.ast;
 
 import cat.kmruiz.mongodb.services.mql.MongoDBNamespace;
+import com.intellij.psi.PsiElement;
 
 import java.util.List;
 
-public record QueryNode<Origin>(
+public record QueryNode(
         MongoDBNamespace namespace,
         Operation operation,
-        Origin origin,
-        Origin collectionOrigin,
-        List<Node<Origin>> children,
+        PsiElement origin,
+        PsiElement collectionOrigin,
+        List<Node> children,
         ReadPreference readPreference,
         int maxStaleness
-) implements Node<Origin> {
+) implements Node {
     @Override
-    public Node<Origin> parent() {
+    public Node parent() {
         return null;
     }
 

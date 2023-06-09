@@ -29,7 +29,7 @@ public final class MQLIndexQualityChecker implements MQLQueryQualityChecker {
         this.mqlIndexDesigner = project.getService(MQLIndexDesigner.class);
     }
 
-    public void check(QueryNode<PsiElement> query, ProblemsHolder holder) {
+    public void check(QueryNode query, ProblemsHolder holder) {
         var indexResult = mongoDBFacade.indexesOfCollection(query.namespace());
         var shardingResult = mongoDBFacade.isCollectionSharded(query.namespace());
 
@@ -83,7 +83,7 @@ public final class MQLIndexQualityChecker implements MQLQueryQualityChecker {
     }
 
     @Override
-    public void checkInvalid(InvalidMQLNode<PsiElement> invalid, ProblemsHolder holder) {
+    public void checkInvalid(InvalidMQLNode invalid, ProblemsHolder holder) {
         if (invalid.reason() == InvalidMQLNode.Reason.UNKNOWN_NAMESPACE && invalid.collectionReference() != null) {
             holder.registerProblem(invalid.collectionReference(),
                     InspectionBundle.message("inspection.QueryIndexingQualityInspection.couldNotDetectNamespace"),
@@ -91,9 +91,9 @@ public final class MQLIndexQualityChecker implements MQLQueryQualityChecker {
         }
     }
 
-    private Set<String> collectAllFieldNames(Node<PsiElement> node) {
+    private Set<String> collectAllFieldNames(Node node) {
         var fieldNames = new HashSet<String>();
-        if (node instanceof BinOpNode<PsiElement> binOp) {
+        if (node instanceof BinOpNode binOp) {
             fieldNames.add(binOp.field().name());
         } else {
             for (var child : node.children()) {

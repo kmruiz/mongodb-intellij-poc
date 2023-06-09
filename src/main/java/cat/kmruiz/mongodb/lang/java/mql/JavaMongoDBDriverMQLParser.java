@@ -27,36 +27,36 @@ import java.util.*;
 
 @Service(Service.Level.PROJECT)
 public final class JavaMongoDBDriverMQLParser {
-    public Node<PsiElement> parse(@NotNull PsiMethodCallExpression methodCall) {
+    public Node parse(@NotNull PsiMethodCallExpression methodCall) {
         var parent = findContainingCallChain(methodCall);
 
         var declarationOfCollection = findReferenceToCollection(methodCall);
         if (declarationOfCollection == null) {
-            return new InvalidMQLNode<>(methodCall, null, InvalidMQLNode.Reason.UNKNOWN_NAMESPACE);
+            return new InvalidMQLNode(methodCall, null, InvalidMQLNode.Reason.UNKNOWN_NAMESPACE);
         }
 
         var mdbNamespace = inferNamespace(declarationOfCollection);
         if (!mdbNamespace.isKnown()) {
-            return new InvalidMQLNode<>(methodCall, declarationOfCollection, InvalidMQLNode.Reason.UNKNOWN_NAMESPACE);
+            return new InvalidMQLNode(methodCall, declarationOfCollection, InvalidMQLNode.Reason.UNKNOWN_NAMESPACE);
         }
 
         var methodRefCall = methodCall.getMethodExpression().getCanonicalText();
         var operation = inferOperationFromMethod(parent, methodRefCall);
-        var predicates = new ArrayList<Node<PsiElement>>();
+        var predicates = new ArrayList<Node>();
 
         var maybeQueryDsl = fromArgumentListIfValid(operation, methodCall, 0);
         if (maybeQueryDsl.isEmpty()) {
-            return new InvalidMQLNode<>(methodCall, declarationOfCollection, InvalidMQLNode.Reason.INVALID_QUERY);
+            return new InvalidMQLNode(methodCall, declarationOfCollection, InvalidMQLNode.Reason.INVALID_QUERY);
         }
 
         for (var psiExpr : maybeQueryDsl) {
             resolveBsonDocumentChain(psiExpr, predicates);
         }
 
-        return new QueryNode<>(mdbNamespace, operation, methodCall, declarationOfCollection, predicates, QueryNode.ReadPreference.PRIMARY, 0);
+        return new QueryNode(mdbNamespace, operation, methodCall, declarationOfCollection, predicates, QueryNode.ReadPreference.PRIMARY, 0);
     }
 
-    private void resolveBsonDocumentChain(PsiExpression expr, List<Node<PsiElement>> predicates) {
+    private void resolveBsonDocumentChain(PsiExpression expr, List<Node> predicates) {
         if (expr instanceof PsiMethodCallExpression methodCall) {
             var methodName = "";
             var methodArgs = methodCall.getArgumentList().getExpressions();
@@ -76,41 +76,41 @@ public final class JavaMongoDBDriverMQLParser {
 
             switch (methodName) {
                 case "match" -> {
-                    var matchPredicates = new ArrayList<Node<PsiElement>>();
+                    var matchPredicates = new ArrayList<Node>();
                     var filters = fromArgumentListIfValid(QueryNode.Operation.FIND_MANY, methodCall, 0);
                     if (!filters.isEmpty()) {
                         resolveBsonDocumentChain(filters.get(0), matchPredicates);
                     }
-                    var stage = new AggregateMatchStageNode<>(methodCall, matchPredicates);
+                    var stage = new AggregateMatchStageNode(methodCall, matchPredicates);
                     predicates.add(stage);
                 }
                 case "project" -> {
-                    var projectPredicates = new ArrayList<Node<PsiElement>>();
+                    var projectPredicates = new ArrayList<Node>();
                     var filters = fromProjectExpression(methodCall);
                     for (var filter : filters) {
                         if (filter instanceof PsiMethodCallExpression filterCallExpr) {
                             if (filterCallExpr.getText().contains("excludeId")) {
-                                projectPredicates.add(new ExcludeFieldNode<>(filterCallExpr, new FieldReferenceNode<>(filterCallExpr, "_id")));
+                                projectPredicates.add(new ExcludeFieldNode(filterCallExpr, new FieldReferenceNode(filterCallExpr, "_id")));
                             } else if (filterCallExpr.getText().contains("exclude")) {
                                 var filterArgument = filterCallExpr.getArgumentList().getExpressions()[0];
                                 var fieldToExclude = inferConstantValue(filterArgument);
                                 if (fieldToExclude == null) {
-                                    projectPredicates.add(new ExcludeFieldNode<>(filterCallExpr, new FieldReferenceNode<>(filterArgument, null)));
+                                    projectPredicates.add(new ExcludeFieldNode(filterCallExpr, new FieldReferenceNode(filterArgument, null)));
                                 } else {
-                                    projectPredicates.add(new ExcludeFieldNode<>(filterCallExpr, new FieldReferenceNode<>(filterArgument, fieldToExclude.toString())));
+                                    projectPredicates.add(new ExcludeFieldNode(filterCallExpr, new FieldReferenceNode(filterArgument, fieldToExclude.toString())));
                                 }
                             } else if (filterCallExpr.getText().contains("include")) {
                                 var filterArgument = filterCallExpr.getArgumentList().getExpressions()[0];
                                 var fieldToInclude = inferConstantValue(filterArgument);
                                 if (fieldToInclude == null) {
-                                    projectPredicates.add(new IncludeFieldNode<>(filterCallExpr, new FieldReferenceNode<>(filterArgument, null)));
+                                    projectPredicates.add(new IncludeFieldNode(filterCallExpr, new FieldReferenceNode(filterArgument, null)));
                                 } else {
-                                    projectPredicates.add(new IncludeFieldNode<>(filterCallExpr, new FieldReferenceNode<>(filterArgument, fieldToInclude.toString())));
+                                    projectPredicates.add(new IncludeFieldNode(filterCallExpr, new FieldReferenceNode(filterArgument, fieldToInclude.toString())));
                                 }
                             }
                         }
                     }
-                    var stage = new AggregateProjectStageNode<>(methodCall, projectPredicates);
+                    var stage = new AggregateProjectStageNode(methodCall, projectPredicates);
                     predicates.add(stage);
                 }
                 case "eq", "ne", "gt", "lt", "gte", "lte", "in", "nin", "exists", "type", "mod", "regex", "all", "elemMatch", "size", "bitsAllClear", "bitsAllSet", "bitsAnyClear", "bitsAnySet", "geoWithin", "geoWithinBox", "geoWithinPolygon", "geoWithinCenter", "geoWithinCenterSphere", "geoIntersects", "near", "nearSphere" -> {
@@ -118,15 +118,15 @@ public final class JavaMongoDBDriverMQLParser {
                     predicates.add(mqlPred);
                 }
                 case "and", "or", "nor" -> {
-                    var allPreds = new ArrayList<Node<PsiElement>>();
+                    var allPreds = new ArrayList<Node>();
                     for (var arg : methodArgs) {
                         resolveBsonDocumentChain(arg, allPreds);
                     }
 
                     switch (methodName) {
-                        case "and" -> predicates.add(new AndNode<>(methodCall, allPreds));
-                        case "or" -> predicates.add(new OrNode<>(methodCall, allPreds));
-                        case "nor" -> predicates.add(new NorNode<>(methodCall, allPreds));
+                        case "and" -> predicates.add(new AndNode(methodCall, allPreds));
+                        case "or" -> predicates.add(new OrNode(methodCall, allPreds));
+                        case "nor" -> predicates.add(new NorNode(methodCall, allPreds));
                     }
                 }
                 default -> {
@@ -150,26 +150,26 @@ public final class JavaMongoDBDriverMQLParser {
         }
     }
 
-    private BinOpNode<PsiElement> resolveMQLPredicate(PsiElement origin, String operation, PsiExpression field, PsiExpression value) {
+    private BinOpNode resolveMQLPredicate(PsiElement origin, String operation, PsiExpression field, PsiExpression value) {
         var resolvedConstant = inferConstantValue(value);
         var inferredType = inferTypeOf(value);
-        ValueNode<PsiElement> valueNode = null;
+        ValueNode valueNode = null;
 
         if (resolvedConstant == null) {
-            valueNode = new ReferenceValueNode<>(value, inferredType);
+            valueNode = new ReferenceValueNode(value, inferredType);
         } else {
-            valueNode = new ConstantValueNode<>(value, inferredType, resolvedConstant);
+            valueNode = new ConstantValueNode(value, inferredType, resolvedConstant);
         }
 
         if (field instanceof PsiLiteralExpression literalExpr) {
             var fieldName = literalExpr.getValue().toString();
-            return new BinOpNode<>(origin, operation, new FieldReferenceNode<>(field, fieldName), Collections.singletonList(valueNode));
+            return new BinOpNode(origin, operation, new FieldReferenceNode(field, fieldName), Collections.singletonList(valueNode));
         } else {
             var resolvedField = inferConstantValue(field);
             if (resolvedField == null) {
-                return new BinOpNode<>(origin, operation, new FieldReferenceNode<>(field, null), Collections.singletonList(valueNode));
+                return new BinOpNode(origin, operation, new FieldReferenceNode(field, null), Collections.singletonList(valueNode));
             } else {
-                return new BinOpNode<>(origin, operation, new FieldReferenceNode<>(field, resolvedField.toString()), Collections.singletonList(valueNode));
+                return new BinOpNode(origin, operation, new FieldReferenceNode(field, resolvedField.toString()), Collections.singletonList(valueNode));
             }
         }
     }

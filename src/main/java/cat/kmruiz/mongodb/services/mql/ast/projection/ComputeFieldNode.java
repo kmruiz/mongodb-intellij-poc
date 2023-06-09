@@ -2,25 +2,26 @@ package cat.kmruiz.mongodb.services.mql.ast.projection;
 
 import cat.kmruiz.mongodb.services.mql.ast.values.FieldReferenceNode;
 import cat.kmruiz.mongodb.services.mql.ast.values.ValueNode;
+import com.intellij.psi.PsiElement;
 
 import java.util.List;
 
-public final class ComputeFieldNode<Origin> extends ProjectionComputationNode<Origin> {
-    private final FieldReferenceNode<Origin> reference;
-    private final ValueNode<Origin> value;
+public final class ComputeFieldNode extends ProjectionComputationNode {
+    private final FieldReferenceNode reference;
+    private final ValueNode value;
 
-    public ComputeFieldNode(Origin origin, FieldReferenceNode<Origin> reference, ValueNode<Origin> value) {
+    public ComputeFieldNode(PsiElement origin, FieldReferenceNode reference, ValueNode value) {
         super(origin, List.of(reference, value));
 
         this.reference = reference;
         this.value = value;
     }
 
-    public FieldReferenceNode<Origin> reference() {
+    public FieldReferenceNode reference() {
         return reference;
     }
 
-    public ValueNode<Origin> value() {
+    public ValueNode value() {
         return value;
     }
 }

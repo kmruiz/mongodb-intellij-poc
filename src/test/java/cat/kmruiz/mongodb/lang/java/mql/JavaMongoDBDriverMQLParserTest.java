@@ -44,7 +44,7 @@ public class JavaMongoDBDriverMQLParserTest extends LightJavaCodeInsightFixtureT
         assertEquals(COLLECTION, result.namespace().collection());
         assertEquals(FIND_MANY, result.operation());
 
-        var predicate = (BinOpNode<PsiElement>) result.children().get(0);
+        var predicate = (BinOpNode) result.children().get(0);
         assertEquals("a", predicate.field().name());
         assertEquals(1, valueOfBinOp(predicate));
     }
@@ -57,9 +57,9 @@ public class JavaMongoDBDriverMQLParserTest extends LightJavaCodeInsightFixtureT
         assertEquals(COLLECTION, result.namespace().collection());
         assertEquals(FIND_MANY, result.operation());
 
-        var predicate = (AndNode<PsiElement>) result.children().get(0);
-        var firstCond = (BinOpNode<PsiElement>) predicate.children().get(0);
-        var secondCond = (BinOpNode<PsiElement>) predicate.children().get(1);
+        var predicate = (AndNode) result.children().get(0);
+        var firstCond = (BinOpNode) predicate.children().get(0);
+        var secondCond = (BinOpNode) predicate.children().get(1);
 
         assertEquals("a", firstCond.field().name());
         assertEquals(1, valueOfBinOp(firstCond));
@@ -94,9 +94,9 @@ public class JavaMongoDBDriverMQLParserTest extends LightJavaCodeInsightFixtureT
         assertEquals(COLLECTION, result.namespace().collection());
         assertEquals(FIND_MANY, result.operation());
 
-        var predicate = (OrNode<PsiElement>) result.children().get(0);
-        var firstCond = (BinOpNode<PsiElement>) predicate.children().get(0);
-        var secondCond = (BinOpNode<PsiElement>) predicate.children().get(1);
+        var predicate = (OrNode) result.children().get(0);
+        var firstCond = (BinOpNode) predicate.children().get(0);
+        var secondCond = (BinOpNode) predicate.children().get(1);
 
         assertEquals("a", firstCond.field().name());
         assertEquals(1, valueOfBinOp(firstCond));
@@ -113,9 +113,9 @@ public class JavaMongoDBDriverMQLParserTest extends LightJavaCodeInsightFixtureT
         assertEquals(COLLECTION, result.namespace().collection());
         assertEquals(FIND_MANY, result.operation());
 
-        var predicate = (NorNode<PsiElement>) result.children().get(0);
-        var firstCond = (BinOpNode<PsiElement>) predicate.children().get(0);
-        var secondCond = (BinOpNode<PsiElement>) predicate.children().get(1);
+        var predicate = (NorNode) result.children().get(0);
+        var firstCond = (BinOpNode) predicate.children().get(0);
+        var secondCond = (BinOpNode) predicate.children().get(1);
 
         assertEquals("a", firstCond.field().name());
         assertEquals(1, valueOfBinOp(firstCond));
@@ -132,8 +132,8 @@ public class JavaMongoDBDriverMQLParserTest extends LightJavaCodeInsightFixtureT
         assertEquals(COLLECTION, result.namespace().collection());
         assertEquals(AGGREGATE, result.operation());
 
-        var stage = (AggregateMatchStageNode<PsiElement>) result.children().get(0);
-        var query = (BinOpNode<PsiElement>) stage.children().get(0);
+        var stage = (AggregateMatchStageNode) result.children().get(0);
+        var query = (BinOpNode) stage.children().get(0);
 
         assertEquals("a", query.field().name());
         assertEquals(1, valueOfBinOp(query));
@@ -159,9 +159,9 @@ public class JavaMongoDBDriverMQLParserTest extends LightJavaCodeInsightFixtureT
         assertEquals(COLLECTION, result.namespace().collection());
         assertEquals(AGGREGATE, result.operation());
 
-        var stage = (AggregateProjectStageNode<PsiElement>) result.children().get(0);
-        var excludeId = (ExcludeFieldNode<PsiElement>) stage.children().get(0);
-        var includeAlias = (IncludeFieldNode<PsiElement>) stage.children().get(1);
+        var stage = (AggregateProjectStageNode) result.children().get(0);
+        var excludeId = (ExcludeFieldNode) stage.children().get(0);
+        var includeAlias = (IncludeFieldNode) stage.children().get(1);
 
         assertEquals("_id", excludeId.reference().name());
         assertEquals("alias", includeAlias.reference().name());
@@ -175,11 +175,11 @@ public class JavaMongoDBDriverMQLParserTest extends LightJavaCodeInsightFixtureT
         assertEquals(COLLECTION, result.namespace().collection());
         assertEquals(AGGREGATE, result.operation());
 
-        var firstMatch = (AggregateMatchStageNode<PsiElement>) result.children().get(0);
-        var firstQuery = (BinOpNode<PsiElement>) firstMatch.children().get(0);
+        var firstMatch = (AggregateMatchStageNode) result.children().get(0);
+        var firstQuery = (BinOpNode) firstMatch.children().get(0);
 
-        var secondMatch = (AggregateMatchStageNode<PsiElement>) result.children().get(1);
-        var secondQuery = (BinOpNode<PsiElement>) secondMatch.children().get(0);
+        var secondMatch = (AggregateMatchStageNode) result.children().get(1);
+        var secondQuery = (BinOpNode) secondMatch.children().get(0);
 
         assertEquals("a", firstQuery.field().name());
         assertEquals(1, valueOfBinOp(firstQuery));
@@ -188,13 +188,13 @@ public class JavaMongoDBDriverMQLParserTest extends LightJavaCodeInsightFixtureT
         assertEquals(2, valueOfBinOp(secondQuery));
     }
 
-    private QueryNode<PsiElement> parseValid(PsiMethodCallExpression methodCallExpression) {
+    private QueryNode parseValid(PsiMethodCallExpression methodCallExpression) {
         var result = javaMongoDBDriverMQLParser.parse(methodCallExpression);
-        if (result instanceof QueryNode<PsiElement> qn) {
+        if (result instanceof QueryNode qn) {
             return qn;
         }
 
-        var invalidNode = (InvalidMQLNode<?>) result;
+        var invalidNode = (InvalidMQLNode) result;
         throw new IllegalArgumentException(invalidNode.reason().toString());
     }
 
@@ -232,7 +232,7 @@ public class JavaMongoDBDriverMQLParserTest extends LightJavaCodeInsightFixtureT
     }
 
     @NotNull
-    private static Object valueOfBinOp(BinOpNode<PsiElement> predicate) {
-        return ((ValueNode<PsiElement>) predicate.children().get(0)).inferValue().get();
+    private static Object valueOfBinOp(BinOpNode predicate) {
+        return ((ValueNode) predicate.children().get(0)).inferValue().get();
     }
 }

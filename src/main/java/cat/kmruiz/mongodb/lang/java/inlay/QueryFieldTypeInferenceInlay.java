@@ -91,7 +91,7 @@ public class QueryFieldTypeInferenceInlay implements InlayHintsProvider<NoSettin
             }
 
             var parsedQuery = parser.parse(currentMethodExpression);
-            if (parsedQuery instanceof QueryNode<PsiElement> query) {
+            if (parsedQuery instanceof QueryNode query) {
                 var schemaResult = this.facade.schemaOf(query.namespace());
                 if (!schemaResult.connected()) {
                     return true;
@@ -116,8 +116,8 @@ public class QueryFieldTypeInferenceInlay implements InlayHintsProvider<NoSettin
             return true;
         }
 
-        private void iterateOverAllFieldReferences(Node<PsiElement> root, Consumer<BinOpNode<PsiElement>> fn) {
-            if (root instanceof BinOpNode<PsiElement> binOp) {
+        private void iterateOverAllFieldReferences(Node root, Consumer<BinOpNode> fn) {
+            if (root instanceof BinOpNode binOp) {
                 fn.accept(binOp);
             }
 

@@ -20,7 +20,7 @@ public final class MQLQueryIndexAnalyzer {
         this.facade = project.getService(MongoDBFacade.class);
     }
 
-    public List<MQLIndex> indexesOfQuery(QueryNode<?> query) {
+    public List<MQLIndex> indexesOfQuery(QueryNode query) {
         var indexResult = facade.indexesOfCollection(query.namespace());
         if (!indexResult.connected()) {
             return Collections.emptyList();
@@ -30,9 +30,9 @@ public final class MQLQueryIndexAnalyzer {
         return usableIndexesForFields(indexResult.result(), allUsedFields);
     }
 
-    private Set<String> collectAllFieldNames(Node<?> node) {
+    private Set<String> collectAllFieldNames(Node node) {
         var fieldNames = new HashSet<String>();
-        if (node instanceof BinOpNode<?> binOp) {
+        if (node instanceof BinOpNode binOp) {
             fieldNames.add(binOp.field().name());
         } else {
             for (var child : node.children()) {

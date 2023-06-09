@@ -34,9 +34,9 @@ public abstract class AbstractJavaQueryQualityInspection extends AbstractBaseJav
 
                 if (owningClass.getQualifiedName().equals("com.mongodb.client.MongoCollection")) {
                     var parsedQuery = parser.parse(expression);
-                    if (parsedQuery instanceof QueryNode<PsiElement> query) {
+                    if (parsedQuery instanceof QueryNode query) {
                         checker.check(query, holder);
-                    } else if (parsedQuery instanceof InvalidMQLNode<PsiElement> invalid) {
+                    } else if (parsedQuery instanceof InvalidMQLNode invalid) {
                         checker.checkInvalid(invalid, holder);
                     }
                 }

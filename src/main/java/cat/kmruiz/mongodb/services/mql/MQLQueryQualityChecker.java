@@ -6,8 +6,8 @@ import com.intellij.codeInspection.ProblemsHolder;
 import com.intellij.psi.PsiElement;
 
 public interface MQLQueryQualityChecker {
-    void check(QueryNode<PsiElement> query, ProblemsHolder holder);
-    default void checkInvalid(InvalidMQLNode<PsiElement> invalid, ProblemsHolder holder) {
+    void check(QueryNode query, ProblemsHolder holder);
+    default void checkInvalid(InvalidMQLNode invalid, ProblemsHolder holder) {
 
     }
 }

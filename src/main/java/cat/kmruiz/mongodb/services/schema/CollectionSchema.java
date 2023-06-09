@@ -1,6 +1,10 @@
 package cat.kmruiz.mongodb.services.schema;
 
+import cat.kmruiz.mongodb.infrastructure.PsiMongoDBTreeUtils;
+import cat.kmruiz.mongodb.services.mql.ast.QueryNode;
 import cat.kmruiz.mongodb.services.mql.ast.types.BsonType;
+import com.intellij.psi.PsiElement;
+import com.intellij.psi.util.PsiTreeUtil;
 import org.bson.Document;
 import org.bson.types.ObjectId;
 
@@ -38,5 +42,11 @@ public record CollectionSchema(String database, String collection, Map<String, F
         }
 
         return new CollectionSchema(database, collection, newRoot);
+    }
+
+    public CollectionSchema downTo(QueryNode query, PsiElement caret) {
+        var result = PsiMongoDBTreeUtils.findNodeParentOf(query.children(), caret);
+        System.out.println(result);
+        return this;
     }
 }

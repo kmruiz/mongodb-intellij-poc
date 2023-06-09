@@ -19,7 +19,7 @@ public final class MQLIndexDesigner {
         this.facade = project.getService(MongoDBFacade.class);
     }
 
-    public MQLIndex designIndexForQuery(QueryNode<?> queryNode) {
+    public MQLIndex designIndexForQuery(QueryNode queryNode) {
         var equality = new HashSet<String>();
         var sort = new HashSet<String>();
         var range = new HashSet<String>();
@@ -42,8 +42,8 @@ public final class MQLIndexDesigner {
         return new MQLIndex("", indexDef, false, false);
     }
 
-    private void splitIntoESR(Node<?> node, HashSet<String> equality, HashSet<String> sort, HashSet<String> range) {
-        if (node instanceof BinOpNode<?> binOp) {
+    private void splitIntoESR(Node node, HashSet<String> equality, HashSet<String> sort, HashSet<String> range) {
+        if (node instanceof BinOpNode binOp) {
             if (RANGE_OPS.contains(binOp.operation())) {
                 range.add(binOp.field().name());
             } else {

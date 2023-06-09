@@ -92,7 +92,7 @@ public class IndexUsageInlay implements InlayHintsProvider<NoSettings> {
             }
 
             var parsedQuery = parser.parse(currentMethodExpression);
-            if (parsedQuery instanceof QueryNode<PsiElement> query) {
+            if (parsedQuery instanceof QueryNode query) {
                 var indexResult = this.indexAnalyzer.indexesOfQuery(query);
                 if (indexResult.isEmpty()) {
                     return true;

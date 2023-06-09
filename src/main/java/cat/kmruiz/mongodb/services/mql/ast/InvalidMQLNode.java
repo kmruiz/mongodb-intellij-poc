@@ -1,11 +1,13 @@
 package cat.kmruiz.mongodb.services.mql.ast;
 
+import com.intellij.psi.PsiElement;
+
 import java.util.Collections;
 import java.util.List;
 
-public record InvalidMQLNode<Origin>(Origin origin, Origin collectionReference, Reason reason) implements Node<Origin> {
+public record InvalidMQLNode(PsiElement origin, PsiElement collectionReference, Reason reason) implements Node {
     @Override
-    public Node<Origin> parent() {
+    public Node parent() {
         return null;
     }
 
@@ -14,7 +16,7 @@ public record InvalidMQLNode<Origin>(Origin origin, Origin collectionReference, 
     }
 
     @Override
-    public List<Node<Origin>> children() {
+    public List<Node> children() {
         return Collections.emptyList();
     }
 }

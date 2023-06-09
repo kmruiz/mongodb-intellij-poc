@@ -1,9 +1,11 @@
 package cat.kmruiz.mongodb.infrastructure;
 
+import cat.kmruiz.mongodb.services.mql.ast.Node;
 import com.intellij.psi.PsiElement;
 import com.intellij.psi.PsiMethodCallExpression;
 import com.intellij.psi.util.PsiTreeUtil;
 
+import java.util.List;
 import java.util.Objects;
 
 public final class PsiMongoDBTreeUtils {
@@ -46,5 +48,20 @@ public final class PsiMongoDBTreeUtils {
         }
 
         return null;
+    }
+
+    public static Node findNodeParentOf(List<Node> listOfParents, PsiElement reference) {
+        if (listOfParents.isEmpty() || reference == null) {
+            return null;
+        }
+
+        var parent = reference.getParent();
+        for (var el : listOfParents) {
+            if (el.origin() == parent) {
+                return el;
+            }
+        }
+
+        return findNodeParentOf(listOfParents, parent);
     }
 }

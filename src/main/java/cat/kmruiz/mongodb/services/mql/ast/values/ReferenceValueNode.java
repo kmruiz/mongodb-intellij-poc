@@ -1,12 +1,13 @@
 package cat.kmruiz.mongodb.services.mql.ast.values;
 
 import cat.kmruiz.mongodb.services.mql.ast.types.BsonType;
+import com.intellij.psi.PsiElement;
 
 import java.util.Collections;
 import java.util.Optional;
 
-public final class ReferenceValueNode<Origin> extends ValueNode<Origin> {
-    public ReferenceValueNode(Origin origin, BsonType type) {
+public final class ReferenceValueNode extends ValueNode {
+    public ReferenceValueNode(PsiElement origin, BsonType type) {
         super(origin, Collections.emptyList(), type);
     }
 

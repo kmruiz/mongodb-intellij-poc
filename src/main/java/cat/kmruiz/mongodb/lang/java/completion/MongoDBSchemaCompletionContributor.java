@@ -35,7 +35,7 @@ public class MongoDBSchemaCompletionContributor extends CompletionContributor {
                         }
 
                         var parsedQuery = parser.parse(currentMethodExpression);
-                        if (parsedQuery instanceof QueryNode<PsiElement> query) {
+                        if (parsedQuery instanceof QueryNode query) {
                             var schemaInfo = mongodbFacade.schemaOf(query.namespace());
 
                             if (!schemaInfo.connected()) {
