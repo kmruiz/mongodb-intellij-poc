@@ -1,7 +1,7 @@
 package cat.kmruiz.mongodb.lang.java.inlay;
 
 import cat.kmruiz.mongodb.infrastructure.PsiMongoDBTreeUtils;
-import cat.kmruiz.mongodb.lang.java.mql.JavaMQLParser;
+import cat.kmruiz.mongodb.lang.java.mql.JavaMongoDBDriverMQLParser;
 import cat.kmruiz.mongodb.services.MongoDBFacade;
 import cat.kmruiz.mongodb.services.mql.ast.Node;
 import cat.kmruiz.mongodb.services.mql.ast.QueryNode;
@@ -9,7 +9,6 @@ import cat.kmruiz.mongodb.services.mql.ast.binops.BinOpNode;
 import com.intellij.codeInsight.hints.*;
 import com.intellij.lang.Language;
 import com.intellij.openapi.editor.Editor;
-import com.intellij.openapi.util.Key;
 import com.intellij.openapi.util.text.Strings;
 import com.intellij.psi.PsiElement;
 import com.intellij.psi.PsiFile;
@@ -71,7 +70,7 @@ public class QueryFieldTypeInferenceInlay implements InlayHintsProvider<NoSettin
     }
 
     public static class FieldTypeInlayCollector extends FactoryInlayHintsCollector {
-        private final JavaMQLParser parser;
+        private final JavaMongoDBDriverMQLParser parser;
         private final MongoDBFacade facade;
         private final Map<Integer, String> addedInlays;
 
@@ -79,7 +78,7 @@ public class QueryFieldTypeInferenceInlay implements InlayHintsProvider<NoSettin
             super(editor);
 
             this.facade = editor.getProject().getService(MongoDBFacade.class);
-            this.parser = editor.getProject().getService(JavaMQLParser.class);
+            this.parser = editor.getProject().getService(JavaMongoDBDriverMQLParser.class);
             this.addedInlays = new HashMap<>();
         }
 

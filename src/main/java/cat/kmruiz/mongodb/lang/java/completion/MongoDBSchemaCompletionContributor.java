@@ -1,7 +1,7 @@
 package cat.kmruiz.mongodb.lang.java.completion;
 
 import cat.kmruiz.mongodb.infrastructure.PsiMongoDBTreeUtils;
-import cat.kmruiz.mongodb.lang.java.mql.JavaMQLParser;
+import cat.kmruiz.mongodb.lang.java.mql.JavaMongoDBDriverMQLParser;
 import cat.kmruiz.mongodb.services.MongoDBFacade;
 import cat.kmruiz.mongodb.services.mql.ast.QueryNode;
 import com.intellij.codeInsight.completion.*;
@@ -10,8 +10,6 @@ import com.intellij.openapi.util.IconLoader;
 import com.intellij.openapi.util.text.Strings;
 import com.intellij.patterns.PlatformPatterns;
 import com.intellij.psi.PsiElement;
-import com.intellij.psi.PsiMethodCallExpression;
-import com.intellij.psi.util.PsiTreeUtil;
 import com.intellij.ui.JBColor;
 import com.intellij.util.ProcessingContext;
 import org.jetbrains.annotations.NotNull;
@@ -28,7 +26,7 @@ public class MongoDBSchemaCompletionContributor extends CompletionContributor {
                     @Override
                     protected void addCompletions(@NotNull CompletionParameters parameters, @NotNull ProcessingContext context, @NotNull CompletionResultSet result) {
                         var currentProject = parameters.getEditor().getProject();
-                        var parser = currentProject.getService(JavaMQLParser.class);
+                        var parser = currentProject.getService(JavaMongoDBDriverMQLParser.class);
                         var mongodbFacade = currentProject.getService(MongoDBFacade.class);
 
                         var currentMethodExpression = PsiMongoDBTreeUtils.getMongoDBQueryExpression(parameters.getPosition());

@@ -20,6 +20,7 @@ public record QueryNode<Origin>(
         UPDATE_MANY(true),
         DELETE_ONE(false),
         DELETE_MANY(true),
+        AGGREGATE(true),
         UNKNOWN(true);
 
         private final boolean multiple;

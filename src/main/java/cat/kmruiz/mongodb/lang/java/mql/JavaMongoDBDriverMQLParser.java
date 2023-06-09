@@ -4,6 +4,7 @@ import cat.kmruiz.mongodb.services.mql.MongoDBNamespace;
 import cat.kmruiz.mongodb.services.mql.ast.InvalidMQLNode;
 import cat.kmruiz.mongodb.services.mql.ast.Node;
 import cat.kmruiz.mongodb.services.mql.ast.QueryNode;
+import cat.kmruiz.mongodb.services.mql.ast.aggregate.AggregateMatchStageNode;
 import cat.kmruiz.mongodb.services.mql.ast.binops.BinOpNode;
 import cat.kmruiz.mongodb.services.mql.ast.types.BsonType;
 import cat.kmruiz.mongodb.services.mql.ast.values.ConstantValueNode;
@@ -21,7 +22,7 @@ import org.jetbrains.annotations.NotNull;
 import java.util.*;
 
 @Service(Service.Level.PROJECT)
-public final class JavaMQLParser {
+public final class JavaMongoDBDriverMQLParser {
     public Node<PsiElement> parse(@NotNull PsiMethodCallExpression methodCall) {
         var parent = findContainingCallChain(methodCall);
 
@@ -39,13 +40,14 @@ public final class JavaMQLParser {
         var operation = inferOperationFromMethod(parent, methodRefCall);
         var predicates = new ArrayList<Node<PsiElement>>();
 
-        var maybeQueryDsl = fromArgumentListIfValid(methodCall, 0);
+        var maybeQueryDsl = fromArgumentListIfValid(operation, methodCall, 0);
         if (maybeQueryDsl.isEmpty()) {
             return new InvalidMQLNode<>(methodCall, declarationOfCollection, InvalidMQLNode.Reason.INVALID_QUERY);
         }
 
-        var queryDsl = maybeQueryDsl.get();
-        resolveBsonDocumentChain(queryDsl, predicates);
+        for (var psiExpr : maybeQueryDsl) {
+            resolveBsonDocumentChain(psiExpr, predicates);
+        }
 
         return new QueryNode<>(mdbNamespace, operation, methodCall, declarationOfCollection, predicates, QueryNode.ReadPreference.PRIMARY, 0);
     }
@@ -57,7 +59,7 @@ public final class JavaMQLParser {
             var leftExpr = methodCall.getMethodExpression();
             var method = methodCall.resolveMethod();
             if (method == null) {
-                if (!methodCall.getMethodExpression().getText().startsWith("Filters.")) {
+                if (!methodCall.getMethodExpression().getText().startsWith("Filters.") && !methodCall.getMethodExpression().getText().startsWith("Aggregates.")) {
                     return;
                 }
 
@@ -69,6 +71,15 @@ public final class JavaMQLParser {
             }
 
             switch (methodName) {
+                case "match" -> {
+                    var matchPredicates = new ArrayList<Node<PsiElement>>();
+                    var filters = fromArgumentListIfValid(QueryNode.Operation.FIND_MANY, methodCall, 0);
+                    if (!filters.isEmpty()) {
+                        resolveBsonDocumentChain(filters.get(0), matchPredicates);
+                    }
+                    var stage = new AggregateMatchStageNode<>(methodCall, matchPredicates);
+                    predicates.add(stage);
+                }
                 case "eq", "ne", "gt", "lt", "gte", "lte", "in", "nin", "exists", "type", "mod", "regex", "all", "elemMatch", "size", "bitsAllClear", "bitsAllSet", "bitsAnyClear", "bitsAnySet", "geoWithin", "geoWithinBox", "geoWithinPolygon", "geoWithinCenter", "geoWithinCenterSphere", "geoIntersects", "near", "nearSphere" -> {
                     var mqlPred = resolveMQLPredicate(methodCall, methodName, methodArgs[0], methodArgs[1]);
                     predicates.add(mqlPred);
@@ -204,29 +215,36 @@ public final class JavaMQLParser {
             return QueryNode.Operation.DELETE_ONE;
         } else if (methodRefCall.contains("deleteMany")) {
             return QueryNode.Operation.DELETE_MANY;
+        } else if (methodRefCall.contains("aggregate")) {
+            return QueryNode.Operation.AGGREGATE;
         } else {
             return QueryNode.Operation.UNKNOWN;
         }
     }
 
-    private static Optional<PsiExpression> fromArgumentListIfValid(@NotNull PsiMethodCallExpression methodCall, int argIdx) {
+    private static List<PsiExpression> fromArgumentListIfValid(QueryNode.Operation operation, @NotNull PsiMethodCallExpression methodCall, int argIdx) {
         var args = methodCall.getArgumentList();
-        if (args.getExpressionCount() >= argIdx) {
+
+        if (operation == QueryNode.Operation.AGGREGATE) {
+            var els = PsiTreeUtil.collectElements(methodCall, el -> el.getText().endsWith("asList"));
+            var allExprs = PsiTreeUtil.collectElements(els[0].getNextSibling(), el -> el instanceof PsiMethodCallExpression && el.getText().startsWith("Aggregates."));
+            return Arrays.stream(allExprs).map(e -> (PsiExpression) e).toList();
+        } else if (args.getExpressionCount() >= argIdx) {
             var queryArg = Objects.requireNonNullElse(args.getExpressionTypes().length >= argIdx ? args.getExpressionTypes()[argIdx] : null, PsiType.getTypeByName("org.bson.Document", methodCall.getProject(), GlobalSearchScope.EMPTY_SCOPE));
             if (queryArg.isValid() && (queryArg.equalsToText("org.bson.Document") || queryArg.equalsToText("org.bson.conversions.Bson"))) {
-                return Optional.of(args.getExpressions()[argIdx]);
-            } else {
+                return Collections.singletonList(args.getExpressions()[argIdx]);
+            }else {
                 var allQueryExpr = findAllQueryExpr(methodCall);
                 for (var idx = allQueryExpr.size() - 1; idx >= 0; idx--) {
-                    var result = fromArgumentListIfValid(allQueryExpr.get(idx), argIdx);
-                    if (result.isPresent()) {
+                    var result = fromArgumentListIfValid(operation, allQueryExpr.get(idx), argIdx);
+                    if (!result.isEmpty()) {
                         return result;
                     }
                 }
             }
         }
 
-        return Optional.empty();
+        return Collections.emptyList();
     }
 
     private Optional<MongoDBNamespace> inferFromConstructor(String fieldName, PsiMethod constructor) {

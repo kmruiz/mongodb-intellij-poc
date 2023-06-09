@@ -2,6 +2,7 @@ package cat.kmruiz.mongodb.lang.java.mql;
 
 import cat.kmruiz.mongodb.services.mql.ast.InvalidMQLNode;
 import cat.kmruiz.mongodb.services.mql.ast.QueryNode;
+import cat.kmruiz.mongodb.services.mql.ast.aggregate.AggregateMatchStageNode;
 import cat.kmruiz.mongodb.services.mql.ast.binops.BinOpNode;
 import cat.kmruiz.mongodb.services.mql.ast.values.ValueNode;
 import cat.kmruiz.mongodb.services.mql.ast.varops.AndNode;
@@ -16,16 +17,15 @@ import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import org.junit.jupiter.api.Test;
 
-import static cat.kmruiz.mongodb.services.mql.ast.QueryNode.Operation.FIND_MANY;
-import static cat.kmruiz.mongodb.services.mql.ast.QueryNode.Operation.FIND_ONE;
+import static cat.kmruiz.mongodb.services.mql.ast.QueryNode.Operation.*;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
 @RunsInEdt
-public class JavaMQLParserTest extends LightJavaCodeInsightFixtureTestCase5 {
+public class JavaMongoDBDriverMQLParserTest extends LightJavaCodeInsightFixtureTestCase5 {
     private static final String DATABASE = "data";
     private static final String COLLECTION = "coll";
 
-    private final JavaMQLParser javaMQLParser = new JavaMQLParser();
+    private final JavaMongoDBDriverMQLParser javaMongoDBDriverMQLParser = new JavaMongoDBDriverMQLParser();
 
     @Nullable
     @Override
@@ -121,8 +121,44 @@ public class JavaMQLParserTest extends LightJavaCodeInsightFixtureTestCase5 {
         assertEquals(2, valueOfBinOp(secondCond));
     }
 
+    @Test
+    void should_understand_aggregation_match() {
+        var result = parseValid(withJavaQuery("collection.aggregate(Arrays.asList(Aggregates.match(Filters.eq(\"a\", 1))))"));
+
+        assertEquals(DATABASE, result.namespace().database());
+        assertEquals(COLLECTION, result.namespace().collection());
+        assertEquals(AGGREGATE, result.operation());
+
+        var stage = (AggregateMatchStageNode<PsiElement>) result.children().get(0);
+        var query = (BinOpNode<PsiElement>) stage.children().get(0);
+
+        assertEquals("a", query.field());
+        assertEquals(1, valueOfBinOp(query));
+    }
+
+    @Test
+    void should_understand_multiple_aggregate_stages() {
+        var result = parseValid(withJavaQuery("collection.aggregate(Arrays.asList(Aggregates.match(Filters.eq(\"a\", 1)), Aggregates.match(Filters.eq(\"b\", 2))))"));
+
+        assertEquals(DATABASE, result.namespace().database());
+        assertEquals(COLLECTION, result.namespace().collection());
+        assertEquals(AGGREGATE, result.operation());
+
+        var firstMatch = (AggregateMatchStageNode<PsiElement>) result.children().get(0);
+        var firstQuery = (BinOpNode<PsiElement>) firstMatch.children().get(0);
+
+        var secondMatch = (AggregateMatchStageNode<PsiElement>) result.children().get(1);
+        var secondQuery = (BinOpNode<PsiElement>) secondMatch.children().get(0);
+
+        assertEquals("a", firstQuery.field());
+        assertEquals(1, valueOfBinOp(firstQuery));
+
+        assertEquals("b", secondQuery.field());
+        assertEquals(2, valueOfBinOp(secondQuery));
+    }
+
     private QueryNode<PsiElement> parseValid(PsiMethodCallExpression methodCallExpression) {
-        var result = javaMQLParser.parse(methodCallExpression);
+        var result = javaMongoDBDriverMQLParser.parse(methodCallExpression);
         if (result instanceof QueryNode<PsiElement> qn) {
             return qn;
         }
@@ -136,8 +172,15 @@ public class JavaMQLParserTest extends LightJavaCodeInsightFixtureTestCase5 {
         var javaCode = """
                 import com.mongodb.client.MongoClient;
                 import com.mongodb.client.MongoClients;
+                import com.mongodb.client.MongoCollection;
+                import com.mongodb.client.MongoDatabase;
+                import com.mongodb.ExplainVerbosity;
+                import com.mongodb.client.model.Accumulators;
                 import com.mongodb.client.model.Aggregates;
                 import com.mongodb.client.model.Filters;
+                import com.mongodb.client.model.Projections;
+                import org.bson.Document;
+                import java.util.Arrays;
                                 
                 public class %s {
                     public static void main(String[] args) {

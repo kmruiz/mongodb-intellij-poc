@@ -1,8 +1,7 @@
 package cat.kmruiz.mongodb.lang.java;
 
-import cat.kmruiz.mongodb.lang.java.mql.JavaMQLParser;
+import cat.kmruiz.mongodb.lang.java.mql.JavaMongoDBDriverMQLParser;
 import cat.kmruiz.mongodb.services.mql.MQLQueryQualityChecker;
-import cat.kmruiz.mongodb.services.mql.MQLTypeChecker;
 import cat.kmruiz.mongodb.services.mql.ast.InvalidMQLNode;
 import cat.kmruiz.mongodb.services.mql.ast.QueryNode;
 import com.intellij.codeInspection.AbstractBaseJavaLocalInspectionTool;
@@ -20,7 +19,7 @@ public abstract class AbstractJavaQueryQualityInspection extends AbstractBaseJav
     @Override
     public @NotNull PsiElementVisitor buildVisitor(@NotNull ProblemsHolder holder, boolean isOnTheFly) {
         var checker = qualityChecker(holder.getProject());
-        var parser = holder.getProject().getService(JavaMQLParser.class);
+        var parser = holder.getProject().getService(JavaMongoDBDriverMQLParser.class);
 
         return new JavaElementVisitor() {
             @Override
