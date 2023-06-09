@@ -13,6 +13,11 @@ public record QueryNode<Origin>(
         ReadPreference readPreference,
         int maxStaleness
 ) implements Node<Origin> {
+    @Override
+    public Node<Origin> parent() {
+        return null;
+    }
+
     public enum Operation {
         FIND_ONE(false),
         FIND_MANY(true),

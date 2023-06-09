@@ -1,16 +1,13 @@
 package cat.kmruiz.mongodb.services.mql.ast.values;
 
-import cat.kmruiz.mongodb.services.mql.ast.Node;
 import cat.kmruiz.mongodb.services.mql.ast.types.BsonType;
 
 import java.util.Collections;
-import java.util.List;
 import java.util.Optional;
 
-public record ReferenceValueNode<Origin>(Origin origin, BsonType type) implements ValueNode<Origin> {
-    @Override
-    public List<Node<Origin>> children() {
-        return Collections.emptyList();
+public final class ReferenceValueNode<Origin> extends ValueNode<Origin> {
+    public ReferenceValueNode(Origin origin, BsonType type) {
+        super(origin, Collections.emptyList(), type);
     }
 
     @Override

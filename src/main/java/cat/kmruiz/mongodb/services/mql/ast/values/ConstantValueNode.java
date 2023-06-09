@@ -1,20 +1,20 @@
 package cat.kmruiz.mongodb.services.mql.ast.values;
 
-import cat.kmruiz.mongodb.services.mql.ast.Node;
 import cat.kmruiz.mongodb.services.mql.ast.types.BsonType;
 
 import java.util.Collections;
-import java.util.List;
 import java.util.Optional;
 
-public record ConstantValueNode<Origin>(Origin origin, BsonType type, Object constant) implements ValueNode<Origin> {
-    @Override
-    public Optional<Object> inferValue() {
-        return Optional.of(constant);
+public final class ConstantValueNode<Origin> extends ValueNode<Origin> {
+    private final Object constant;
+
+    public ConstantValueNode(Origin origin, BsonType type, Object constant) {
+        super(origin, Collections.emptyList(), type);
+        this.constant = constant;
     }
 
     @Override
-    public List<Node<Origin>> children() {
-        return Collections.emptyList();
+    public Optional<Object> inferValue() {
+        return Optional.of(constant);
     }
 }

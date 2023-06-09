@@ -1,16 +1,18 @@
 package cat.kmruiz.mongodb.services.mql.ast.values;
 
-import cat.kmruiz.mongodb.services.mql.ast.Node;
+import cat.kmruiz.mongodb.services.mql.ast.BaseNode;
 
-import java.util.List;
+import java.util.Collections;
 
-public record FieldReferenceNode<Origin>(Origin origin, String name) implements Node<Origin> {
-    public boolean isKnown() {
-        return name != null;
+public final class FieldReferenceNode<Origin> extends BaseNode<Origin> {
+    private final String name;
+
+    public FieldReferenceNode(Origin origin, String name) {
+        super(origin, Collections.emptyList());
+        this.name = name;
     }
 
-    @Override
-    public List<Node<Origin>> children() {
-        return null;
+    public String name() {
+        return name;
     }
 }

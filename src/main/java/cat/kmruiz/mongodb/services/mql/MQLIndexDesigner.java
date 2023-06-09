@@ -6,7 +6,6 @@ import cat.kmruiz.mongodb.services.mql.ast.QueryNode;
 import cat.kmruiz.mongodb.services.mql.ast.binops.BinOpNode;
 import com.intellij.openapi.components.Service;
 import com.intellij.openapi.project.Project;
-import com.intellij.psi.PsiElement;
 
 import java.util.HashSet;
 import java.util.LinkedList;

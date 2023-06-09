@@ -4,7 +4,6 @@ import cat.kmruiz.mongodb.services.MongoDBFacade;
 import cat.kmruiz.mongodb.services.mql.ast.Node;
 import cat.kmruiz.mongodb.services.mql.ast.QueryNode;
 import cat.kmruiz.mongodb.services.mql.ast.binops.BinOpNode;
-import cat.kmruiz.mongodb.services.mql.ast.values.ConstantValueNode;
 import cat.kmruiz.mongodb.services.mql.ast.values.ValueNode;
 import cat.kmruiz.mongodb.services.schema.CollectionSchema;
 import cat.kmruiz.mongodb.ui.InspectionBundle;
