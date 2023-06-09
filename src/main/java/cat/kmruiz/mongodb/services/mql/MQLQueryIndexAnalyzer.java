@@ -34,7 +34,7 @@ public final class MQLQueryIndexAnalyzer {
     private Set<String> collectAllFieldNames(Node<?> node) {
         var fieldNames = new HashSet<String>();
         if (node instanceof BinOpNode<?> binOp) {
-            fieldNames.add(binOp.field());
+            fieldNames.add(binOp.field().name());
         } else {
             for (var child : node.children()) {
                 fieldNames.addAll(collectAllFieldNames(child));

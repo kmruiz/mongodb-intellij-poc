@@ -5,9 +5,13 @@ import cat.kmruiz.mongodb.services.mql.ast.InvalidMQLNode;
 import cat.kmruiz.mongodb.services.mql.ast.Node;
 import cat.kmruiz.mongodb.services.mql.ast.QueryNode;
 import cat.kmruiz.mongodb.services.mql.ast.aggregate.AggregateMatchStageNode;
+import cat.kmruiz.mongodb.services.mql.ast.aggregate.AggregateProjectStageNode;
 import cat.kmruiz.mongodb.services.mql.ast.binops.BinOpNode;
+import cat.kmruiz.mongodb.services.mql.ast.projection.ExcludeFieldNode;
+import cat.kmruiz.mongodb.services.mql.ast.projection.IncludeFieldNode;
 import cat.kmruiz.mongodb.services.mql.ast.types.BsonType;
 import cat.kmruiz.mongodb.services.mql.ast.values.ConstantValueNode;
+import cat.kmruiz.mongodb.services.mql.ast.values.FieldReferenceNode;
 import cat.kmruiz.mongodb.services.mql.ast.values.ReferenceValueNode;
 import cat.kmruiz.mongodb.services.mql.ast.values.ValueNode;
 import cat.kmruiz.mongodb.services.mql.ast.varops.AndNode;
@@ -80,6 +84,35 @@ public final class JavaMongoDBDriverMQLParser {
                     var stage = new AggregateMatchStageNode<>(methodCall, matchPredicates);
                     predicates.add(stage);
                 }
+                case "project" -> {
+                    var projectPredicates = new ArrayList<Node<PsiElement>>();
+                    var filters = fromProjectExpression(methodCall);
+                    for (var filter : filters) {
+                        if (filter instanceof PsiMethodCallExpression filterCallExpr) {
+                            if (filterCallExpr.getText().contains("excludeId")) {
+                                projectPredicates.add(new ExcludeFieldNode<>(filterCallExpr, new FieldReferenceNode<>(filterCallExpr, "_id")));
+                            } else if (filterCallExpr.getText().contains("exclude")) {
+                                var filterArgument = filterCallExpr.getArgumentList().getExpressions()[0];
+                                var fieldToExclude = inferConstantValue(filterArgument);
+                                if (fieldToExclude == null) {
+                                    projectPredicates.add(new ExcludeFieldNode<>(filterCallExpr, new FieldReferenceNode<>(filterArgument, null)));
+                                } else {
+                                    projectPredicates.add(new ExcludeFieldNode<>(filterCallExpr, new FieldReferenceNode<>(filterArgument, fieldToExclude.toString())));
+                                }
+                            } else if (filterCallExpr.getText().contains("include")) {
+                                var filterArgument = filterCallExpr.getArgumentList().getExpressions()[0];
+                                var fieldToInclude = inferConstantValue(filterArgument);
+                                if (fieldToInclude == null) {
+                                    projectPredicates.add(new IncludeFieldNode<>(filterCallExpr, new FieldReferenceNode<>(filterArgument, null)));
+                                } else {
+                                    projectPredicates.add(new IncludeFieldNode<>(filterCallExpr, new FieldReferenceNode<>(filterArgument, fieldToInclude.toString())));
+                                }
+                            }
+                        }
+                    }
+                    var stage = new AggregateProjectStageNode<>(methodCall, projectPredicates);
+                    predicates.add(stage);
+                }
                 case "eq", "ne", "gt", "lt", "gte", "lte", "in", "nin", "exists", "type", "mod", "regex", "all", "elemMatch", "size", "bitsAllClear", "bitsAllSet", "bitsAnyClear", "bitsAnySet", "geoWithin", "geoWithinBox", "geoWithinPolygon", "geoWithinCenter", "geoWithinCenterSphere", "geoIntersects", "near", "nearSphere" -> {
                     var mqlPred = resolveMQLPredicate(methodCall, methodName, methodArgs[0], methodArgs[1]);
                     predicates.add(mqlPred);
@@ -130,13 +163,13 @@ public final class JavaMongoDBDriverMQLParser {
 
         if (field instanceof PsiLiteralExpression literalExpr) {
             var fieldName = literalExpr.getValue().toString();
-            return new BinOpNode<>(origin, operation, fieldName, field, Collections.singletonList(valueNode));
+            return new BinOpNode<>(origin, operation, new FieldReferenceNode<>(field, fieldName), Collections.singletonList(valueNode));
         } else {
             var resolvedField = inferConstantValue(field);
             if (resolvedField == null) {
-                return new BinOpNode<>(origin, operation, null, field, Collections.singletonList(valueNode));
+                return new BinOpNode<>(origin, operation, new FieldReferenceNode<>(field, null), Collections.singletonList(valueNode));
             } else {
-                return new BinOpNode<>(origin, operation, resolvedField.toString(), field, Collections.singletonList(valueNode));
+                return new BinOpNode<>(origin, operation, new FieldReferenceNode<>(field, resolvedField.toString()), Collections.singletonList(valueNode));
             }
         }
     }
@@ -245,6 +278,11 @@ public final class JavaMongoDBDriverMQLParser {
         }
 
         return Collections.emptyList();
+    }
+
+    private static List<PsiExpression> fromProjectExpression(@NotNull PsiMethodCallExpression methodCall) {
+        var allProjections = PsiTreeUtil.collectElements(methodCall, el -> el instanceof PsiMethodCallExpression && el.getText().contains("Projections") && !el.getText().contains("fields"));
+        return Arrays.stream(allProjections).map(e -> (PsiExpression) e).toList();
     }
 
     private Optional<MongoDBNamespace> inferFromConstructor(String fieldName, PsiMethod constructor) {

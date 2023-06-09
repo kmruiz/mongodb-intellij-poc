@@ -100,13 +100,13 @@ public class QueryFieldTypeInferenceInlay implements InlayHintsProvider<NoSettin
                 var schema = schemaResult.result();
 
                 iterateOverAllFieldReferences(query, binOp -> {
-                    var typeOfField = schema.ofField(binOp.field());
+                    var typeOfField = schema.ofField(binOp.field().name());
                     var fieldTypesHash = Strings.join(typeOfField.types(), "|");
                     var fieldTypes = getFactory().text(": " + Strings.join(typeOfField.types(), " | "));
 
-                    if (!this.addedInlays.getOrDefault(binOp.fieldOrigin().getTextOffset(), "").equals(fieldTypesHash)) {
-                        inlayHintsSink.addInlineElement(binOp.fieldOrigin().getTextOffset() + binOp.fieldOrigin().getTextLength(), true, fieldTypes, false);
-                        this.addedInlays.put(binOp.fieldOrigin().getTextOffset(), fieldTypesHash);
+                    if (!this.addedInlays.getOrDefault(binOp.field().origin().getTextOffset(), "").equals(fieldTypesHash)) {
+                        inlayHintsSink.addInlineElement(binOp.field().origin().getTextOffset() + binOp.field().origin().getTextLength(), true, fieldTypes, false);
+                        this.addedInlays.put(binOp.field().origin().getTextOffset(), fieldTypesHash);
                     }
                 });
 

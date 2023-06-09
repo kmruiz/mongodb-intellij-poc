@@ -46,9 +46,9 @@ public final class MQLIndexDesigner {
     private void splitIntoESR(Node<?> node, HashSet<String> equality, HashSet<String> sort, HashSet<String> range) {
         if (node instanceof BinOpNode<?> binOp) {
             if (RANGE_OPS.contains(binOp.operation())) {
-                range.add(binOp.field());
+                range.add(binOp.field().name());
             } else {
-                equality.add(binOp.field());
+                equality.add(binOp.field().name());
             }
         } else {
             for (var child : node.children()) {

@@ -3,7 +3,10 @@ package cat.kmruiz.mongodb.lang.java.mql;
 import cat.kmruiz.mongodb.services.mql.ast.InvalidMQLNode;
 import cat.kmruiz.mongodb.services.mql.ast.QueryNode;
 import cat.kmruiz.mongodb.services.mql.ast.aggregate.AggregateMatchStageNode;
+import cat.kmruiz.mongodb.services.mql.ast.aggregate.AggregateProjectStageNode;
 import cat.kmruiz.mongodb.services.mql.ast.binops.BinOpNode;
+import cat.kmruiz.mongodb.services.mql.ast.projection.ExcludeFieldNode;
+import cat.kmruiz.mongodb.services.mql.ast.projection.IncludeFieldNode;
 import cat.kmruiz.mongodb.services.mql.ast.values.ValueNode;
 import cat.kmruiz.mongodb.services.mql.ast.varops.AndNode;
 import cat.kmruiz.mongodb.services.mql.ast.varops.NorNode;
@@ -42,7 +45,7 @@ public class JavaMongoDBDriverMQLParserTest extends LightJavaCodeInsightFixtureT
         assertEquals(FIND_MANY, result.operation());
 
         var predicate = (BinOpNode<PsiElement>) result.children().get(0);
-        assertEquals("a", predicate.field());
+        assertEquals("a", predicate.field().name());
         assertEquals(1, valueOfBinOp(predicate));
     }
 
@@ -58,10 +61,10 @@ public class JavaMongoDBDriverMQLParserTest extends LightJavaCodeInsightFixtureT
         var firstCond = (BinOpNode<PsiElement>) predicate.children().get(0);
         var secondCond = (BinOpNode<PsiElement>) predicate.children().get(1);
 
-        assertEquals("a", firstCond.field());
+        assertEquals("a", firstCond.field().name());
         assertEquals(1, valueOfBinOp(firstCond));
 
-        assertEquals("b", secondCond.field());
+        assertEquals("b", secondCond.field().name());
         assertEquals(2, valueOfBinOp(secondCond));
     }
 
@@ -95,10 +98,10 @@ public class JavaMongoDBDriverMQLParserTest extends LightJavaCodeInsightFixtureT
         var firstCond = (BinOpNode<PsiElement>) predicate.children().get(0);
         var secondCond = (BinOpNode<PsiElement>) predicate.children().get(1);
 
-        assertEquals("a", firstCond.field());
+        assertEquals("a", firstCond.field().name());
         assertEquals(1, valueOfBinOp(firstCond));
 
-        assertEquals("b", secondCond.field());
+        assertEquals("b", secondCond.field().name());
         assertEquals(2, valueOfBinOp(secondCond));
     }
 
@@ -114,10 +117,10 @@ public class JavaMongoDBDriverMQLParserTest extends LightJavaCodeInsightFixtureT
         var firstCond = (BinOpNode<PsiElement>) predicate.children().get(0);
         var secondCond = (BinOpNode<PsiElement>) predicate.children().get(1);
 
-        assertEquals("a", firstCond.field());
+        assertEquals("a", firstCond.field().name());
         assertEquals(1, valueOfBinOp(firstCond));
 
-        assertEquals("b", secondCond.field());
+        assertEquals("b", secondCond.field().name());
         assertEquals(2, valueOfBinOp(secondCond));
     }
 
@@ -132,8 +135,36 @@ public class JavaMongoDBDriverMQLParserTest extends LightJavaCodeInsightFixtureT
         var stage = (AggregateMatchStageNode<PsiElement>) result.children().get(0);
         var query = (BinOpNode<PsiElement>) stage.children().get(0);
 
-        assertEquals("a", query.field());
+        assertEquals("a", query.field().name());
         assertEquals(1, valueOfBinOp(query));
+    }
+
+    @Test
+    void should_understand_projection_stages() {
+        var result = parseValid(withJavaQuery(
+                """
+                        collection.aggregate(
+                            Arrays.asList(
+                                Aggregates.project(
+                                    Projections.fields(
+                                        Projections.excludeId(),
+                                        Projections.include("alias")
+                                    )
+                                )
+                            )
+                        )"""
+        ));
+
+        assertEquals(DATABASE, result.namespace().database());
+        assertEquals(COLLECTION, result.namespace().collection());
+        assertEquals(AGGREGATE, result.operation());
+
+        var stage = (AggregateProjectStageNode<PsiElement>) result.children().get(0);
+        var excludeId = (ExcludeFieldNode<PsiElement>) stage.children().get(0);
+        var includeAlias = (IncludeFieldNode<PsiElement>) stage.children().get(1);
+
+        assertEquals("_id", excludeId.reference().name());
+        assertEquals("alias", includeAlias.reference().name());
     }
 
     @Test
@@ -150,10 +181,10 @@ public class JavaMongoDBDriverMQLParserTest extends LightJavaCodeInsightFixtureT
         var secondMatch = (AggregateMatchStageNode<PsiElement>) result.children().get(1);
         var secondQuery = (BinOpNode<PsiElement>) secondMatch.children().get(0);
 
-        assertEquals("a", firstQuery.field());
+        assertEquals("a", firstQuery.field().name());
         assertEquals(1, valueOfBinOp(firstQuery));
 
-        assertEquals("b", secondQuery.field());
+        assertEquals("b", secondQuery.field().name());
         assertEquals(2, valueOfBinOp(secondQuery));
     }
 

@@ -35,7 +35,7 @@ public final class MQLTypeChecker implements MQLQueryQualityChecker {
         if (node instanceof BinOpNode<PsiElement> binOp) {
             for (var cond : binOp.children()) {
                 if (cond instanceof ValueNode<PsiElement> refVal) {
-                    var fieldSchema = schema.ofField(binOp.field());
+                    var fieldSchema = schema.ofField(binOp.field().name());
                     if (!fieldSchema.supportsProvidedType(refVal.type())) {
                         holder.registerProblem(
                                 refVal.origin(),
