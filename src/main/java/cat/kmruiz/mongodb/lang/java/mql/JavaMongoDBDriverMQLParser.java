@@ -358,6 +358,10 @@ public final class JavaMongoDBDriverMQLParser {
     }
 
     private static BsonType inferTypeOf(PsiExpression expression) {
+        if (expression.getType() == null) {
+            return BsonType.ANY;
+        }
+
         return switch (expression.getType().getCanonicalText()) {
             case "java.lang.String" -> BsonType.STRING;
             case "boolean", "java.lang.Boolean" -> BsonType.BOOLEAN;

@@ -13,6 +13,7 @@ public final class PsiMongoDBTreeUtils {
 
     public static PsiMethodCallExpression getMongoDBQueryExpression(PsiElement parent) {
         var currentMethodExpression = PsiTreeUtil.getParentOfType(parent, PsiMethodCallExpression.class);
+
         if (currentMethodExpression == null) {
             return null;
         }

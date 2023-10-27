@@ -10,6 +10,8 @@ import com.intellij.openapi.util.IconLoader;
 import com.intellij.openapi.util.text.Strings;
 import com.intellij.patterns.PlatformPatterns;
 import com.intellij.psi.PsiElement;
+import com.intellij.psi.PsiJavaToken;
+import com.intellij.psi.PsiMethodCallExpression;
 import com.intellij.ui.JBColor;
 import com.intellij.util.ProcessingContext;
 import org.jetbrains.annotations.NotNull;
@@ -21,10 +23,12 @@ public class MongoDBSchemaCompletionContributor extends CompletionContributor {
 
     public MongoDBSchemaCompletionContributor() {
         extend(CompletionType.BASIC,
-                PlatformPatterns.psiElement(PsiElement.class),
+                PlatformPatterns.psiElement(PsiJavaToken.class),
                 new CompletionProvider<>() {
                     @Override
                     protected void addCompletions(@NotNull CompletionParameters parameters, @NotNull ProcessingContext context, @NotNull CompletionResultSet result) {
+                        result.startBatch();
+
                         var currentProject = parameters.getEditor().getProject();
                         var parser = currentProject.getService(JavaMongoDBDriverMQLParser.class);
                         var mongodbFacade = currentProject.getService(MongoDBFacade.class);
@@ -68,6 +72,8 @@ public class MongoDBSchemaCompletionContributor extends CompletionContributor {
                                         )
                                 );
                             }
+
+                            result.endBatch();
                         }
                     }
                 });

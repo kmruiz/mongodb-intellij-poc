@@ -30,7 +30,7 @@
 
         <codeInsight.inlayProvider language="JAVA" implementationClass="cat.kmruiz.mongodb.lang.java.inlay.QueryFieldTypeInferenceInlay"/>
         <codeInsight.inlayProvider language="JAVA" implementationClass="cat.kmruiz.mongodb.lang.java.inlay.IndexUsageInlay"/>
-        <completion.contributor language="JAVA" implementationClass="cat.kmruiz.mongodb.lang.java.completion.MongoDBSchemaCompletionContributor"/>
+        <completion.contributor language="JAVA" implementationClass="cat.kmruiz.mongodb.lang.java.completion.MongoDBSchemaCompletionContributor" />
 
         <localInspection language="JAVA"
                          bundle="messages.InspectionBundle"

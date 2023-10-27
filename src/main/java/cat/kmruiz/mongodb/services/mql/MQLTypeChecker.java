@@ -39,7 +39,7 @@ public final class MQLTypeChecker implements MQLQueryQualityChecker {
                         holder.registerProblem(
                                 refVal.origin(),
                                 InspectionBundle.message("inspection.MQLQueryPerception.warning.fieldTypeDoesNotMatch",
-                                        binOp.field(), refVal.type(), Strings.join(fieldSchema.types(), "|")
+                                        binOp.field().name(), refVal.type(), Strings.join(fieldSchema.types(), "|")
                                 )
                         );
                     }
