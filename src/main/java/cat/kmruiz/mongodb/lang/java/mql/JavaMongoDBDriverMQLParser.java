@@ -262,7 +262,7 @@ public final class JavaMongoDBDriverMQLParser {
             var els = PsiTreeUtil.collectElements(methodCall, el -> el.getText().endsWith("asList"));
             var allExprs = PsiTreeUtil.collectElements(els[0].getNextSibling(), el -> el instanceof PsiMethodCallExpression && el.getText().startsWith("Aggregates."));
             return Arrays.stream(allExprs).map(e -> (PsiExpression) e).toList();
-        } else if (args.getExpressionCount() >= argIdx) {
+        } else if (args.getExpressionCount() > argIdx) {
             var queryArg = Objects.requireNonNullElse(args.getExpressionTypes().length >= argIdx ? args.getExpressionTypes()[argIdx] : null, PsiType.getTypeByName("org.bson.Document", methodCall.getProject(), GlobalSearchScope.EMPTY_SCOPE));
             if (queryArg.isValid() && (queryArg.equalsToText("org.bson.Document") || queryArg.equalsToText("org.bson.conversions.Bson"))) {
                 return Collections.singletonList(args.getExpressions()[argIdx]);
